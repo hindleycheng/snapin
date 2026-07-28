@@ -1,0 +1,17 @@
+{
+  "name": "snapin-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Snapin 授权服务端 — 发码 / 激活校验 / 邮件",
+  "type": "module",
+  "scripts": {
+    "dev": "/Users/hindleycheng/.workbuddy/binaries/node/versions/22.22.2/bin/node --watch index.js",
+    "start": "/Users/hindleycheng/.workbuddy/binaries/node/versions/22.22.2/bin/node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.6.0",
+    "nanoid": "^5.0.8",
+    "nodemailer": "^6.9.16"
+  }
+}

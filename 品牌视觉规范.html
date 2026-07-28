@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snapin 闪贴 · 品牌视觉规范</title>
+<style>
+:root{
+  --bg:#0a0e1a; --panel:#111827; --panel2:#0f1626; --line:#1e293b;
+  --brand:#3b82f6; --brand2:#60a5fa; --cyan:#22d3ee; --txt:#e5edff;
+  --muted:#8595b8; --glow:0 0 30px rgba(59,130,246,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"SF Pro Display","Segoe UI",system-ui,sans-serif;
+  background:radial-gradient(1200px 600px at 20% -10%,#13203a 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:32px}
+.wrap{max-width:1100px;margin:0 auto}
+h1.page{font-size:26px;font-weight:800;letter-spacing:.5px;margin-bottom:4px}
+.pageSub{color:var(--muted);font-size:14px;margin-bottom:32px}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+  padding:28px;margin-bottom:22px;box-shadow:0 18px 50px rgba(0,0,0,.4)}
+.sec h2{font-size:18px;margin-bottom:6px;display:flex;align-items:center;gap:9px}
+.sec h2 .num{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--cyan));
+  display:grid;place-items:center;font-size:13px;color:#fff}
+.sec .lead{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.7}
+/* logo showcase */
+.logorow{display:flex;gap:24px;flex-wrap:wrap;align-items:stretch}
+.logobox{flex:1;min-width:220px;border:1px solid var(--line);border-radius:14px;
+  padding:26px;display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--panel2)}
+.logobox.light{background:#f4f7ff}
+.logobox .cap{font-size:12px;color:var(--muted)}
+.logobox.light .cap{color:#64748b}
+.logomark{width:88px;height:88px}
+/* wordmark */
+.word{display:flex;align-items:center;gap:12px}
+.word .wm{width:44px;height:44px}
+.word .txt{font-size:30px;font-weight:800;letter-spacing:-.5px}
+.word .txt .in{background:linear-gradient(135deg,var(--brand),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.word.dark .txt{color:#0f1e3a}
+/* color palette */
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.swatch{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.swatch .c{height:78px}
+.swatch .info{padding:10px 12px;font-size:12px}
+.swatch .info b{display:block;font-size:13px;margin-bottom:3px}
+.swatch .info span{color:var(--muted);font-family:ui-monospace,monospace}
+/* type */
+.type .row{display:flex;align-items:baseline;gap:18px;padding:12px 0;border-bottom:1px solid var(--line)}
+.type .row:last-child{border:none}
+.type .lb{width:90px;color:var(--muted);font-size:12px}
+/* usage */
+.usage{display:flex;gap:20px;flex-wrap:wrap}
+.appicon{width:120px;text-align:center}
+.appicon .ic{width:110px;height:110px;border-radius:26px;margin:0 auto 8px;
+  box-shadow:0 14px 34px rgba(59,130,246,.35);display:grid;place-items:center}
+.appicon .nm{font-size:12px;color:var(--muted)}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+.rule{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--panel2)}
+.rule.ok{border-color:rgba(34,197,94,.4)}
+.rule.no{border-color:rgba(239,68,68,.4)}
+.rule .tag{font-size:12px;font-weight:700;margin-bottom:10px}
+.rule.ok .tag{color:#22c55e}.rule.no .tag{color:#ef4444}
+.rule .demo{height:70px;border-radius:8px;display:grid;place-items:center;background:#0b1220}
+.foot{text-align:center;color:#3a4a6b;font-size:12px;margin-top:24px}
+.tagline{font-size:15px;color:var(--brand2);margin-top:8px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="page">Snapin · 闪贴 — 品牌视觉规范</h1>
+  <div class="pageSub">跨平台截图 + 贴图工具 · Brand Guidelines v1.0 · 2026-07-28</div>
+  <!-- 1 Logo -->
+  <div class="sec">
+    <h2><span class="num">1</span>Logo 标志</h2>
+    <div class="lead"><b>设计理念</b>：以「截图选区框 + 图钉」融合为核心。圆角方形代表截图取景框，左上/右下的<b>裁切角标</b>体现"框选截图"，中心的<b>图钉圆点</b>呼应"贴图钉屏"这一核心卖点。整体几何、锐利、有科技感，蓝青渐变延续科技蓝审美。</div>
+    <div class="logorow">
+      <div class="logobox">
+        <svg class="logomark" viewBox="0 0 96 96" fill="none">
+          <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+          <rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g1)"/>
+          <!-- crop brackets -->
+          <path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none" opacity=".95"/>
+          <path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none" opacity=".95"/>
+          <!-- pin dot -->
+          <circle cx="48" cy="48" r="10" fill="#fff"/>
+          <circle cx="48" cy="48" r="4.5" fill="url(#g1)"/>
+        </svg>
+        <div class="cap">主标志 · 深色背景</div>
+      </div>
+      <div class="logobox light">
+        <svg class="logomark" viewBox="0 0 96 96" fill="none">
+          <rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g1)"/>
+          <path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+          <path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+          <circle cx="48" cy="48" r="10" fill="#fff"/>
+          <circle cx="48" cy="48" r="4.5" fill="url(#g1)"/>
+        </svg>
+        <div class="cap">主标志 · 浅色背景</div>
+      </div>
+      <div class="logobox">
+        <svg class="logomark" viewBox="0 0 96 96" fill="none">
+          <rect x="10" y="10" width="76" height="76" rx="22" fill="none" stroke="#60a5fa" stroke-width="4"/>
+          <path d="M30 40 V30 H40" stroke="#60a5fa" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+          <path d="M66 56 V66 H56" stroke="#60a5fa" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+          <circle cx="48" cy="48" r="9" fill="#60a5fa"/>
+        </svg>
+        <div class="cap">单色描边版 · 托盘/水印用</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 Wordmark -->
+  <div class="sec">
+    <h2><span class="num">2</span>标准字与组合</h2>
+    <div class="lead">图标 + 文字横向组合，"in" 用渐变强调，呼应 "Snap <b>in</b>"（一键贴上）的命名逻辑。</div>
+    <div class="logorow">
+      <div class="logobox">
+        <div class="word">
+          <svg class="wm" viewBox="0 0 96 96" fill="none">
+            <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+            <rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g2)"/>
+            <path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+            <path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+            <circle cx="48" cy="48" r="10" fill="#fff"/><circle cx="48" cy="48" r="4.5" fill="url(#g2)"/>
+          </svg>
+          <div class="txt">Snap<span class="in">in</span></div>
+        </div>
+        <div class="tagline">截了就贴，贴了就用</div>
+      </div>
+      <div class="logobox light">
+        <div class="word dark">
+          <svg class="wm" viewBox="0 0 96 96" fill="none">
+            <rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g2)"/>
+            <path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+            <path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+            <circle cx="48" cy="48" r="10" fill="#fff"/><circle cx="48" cy="48" r="4.5" fill="url(#g2)"/>
+          </svg>
+          <div class="txt">Snap<span class="in">in</span> <span style="font-size:20px;font-weight:600;color:#334">闪贴</span></div>
+        </div>
+        <div class="cap" style="color:#64748b">中英组合 · 浅色场景</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 Colors -->
+  <div class="sec">
+    <h2><span class="num">3</span>品牌配色</h2>
+    <div class="lead">主色为科技蓝 → 青的渐变，深色界面为主基调。红/绿/黄仅作为标注功能色，不参与品牌主视觉。</div>
+    <div class="pal">
+      <div class="swatch"><div class="c" style="background:linear-gradient(135deg,#3b82f6,#22d3ee)"></div><div class="info"><b>主渐变 Brand</b><span>#3b82f6 → #22d3ee</span></div></div>
+      <div class="swatch"><div class="c" style="background:#3b82f6"></div><div class="info"><b>主蓝 Primary</b><span>#3b82f6</span></div></div>
+      <div class="swatch"><div class="c" style="background:#22d3ee"></div><div class="info"><b>青 Cyan</b><span>#22d3ee</span></div></div>
+      <div class="swatch"><div class="c" style="background:#0a0e1a"></div><div class="info"><b>背景 BG</b><span>#0a0e1a</span></div></div>
+      <div class="swatch"><div class="c" style="background:#111827"></div><div class="info"><b>面板 Panel</b><span>#111827</span></div></div>
+      <div class="swatch"><div class="c" style="background:#e5edff"></div><div class="info"><b>文字 Text</b><span>#e5edff</span></div></div>
+      <div class="swatch"><div class="c" style="background:#ef4444"></div><div class="info"><b>标注·红</b><span>#ef4444</span></div></div>
+      <div class="swatch"><div class="c" style="background:#22c55e"></div><div class="info"><b>标注·绿</b><span>#22c55e</span></div></div>
+      <div class="swatch"><div class="c" style="background:#f59e0b"></div><div class="info"><b>标注·黄</b><span>#f59e0b</span></div></div>
+    </div>
+  </div>
+
+  <!-- 4 Typography -->
+  <div class="sec">
+    <h2><span class="num">4</span>字体规范</h2>
+    <div class="lead">界面统一使用系统无衬线字体，保证跨平台一致与清晰度。</div>
+    <div class="type">
+      <div class="row"><div class="lb">英文</div><div style="font-size:22px;font-weight:700">SF Pro / Segoe UI</div></div>
+      <div class="row"><div class="lb">中文</div><div style="font-size:22px;font-weight:600">苹方 / 微软雅黑</div></div>
+      <div class="row"><div class="lb">等宽</div><div style="font-family:ui-monospace,monospace;font-size:18px;color:var(--brand2)">SF Mono · 用于尺寸/HEX/快捷键</div></div>
+      <div class="row"><div class="lb">标题</div><div style="font-size:24px;font-weight:800">Bold 800 · 紧凑字距</div></div>
+      <div class="row"><div class="lb">正文</div><div style="font-size:14px;color:var(--muted)">Regular · 14px · 行高 1.6</div></div>
+    </div>
+  </div>
+
+  <!-- 5 App icon usage -->
+  <div class="sec">
+    <h2><span class="num">5</span>应用图标（Dock / 托盘 / 桌面）</h2>
+    <div class="lead">不同平台的图标形状。macOS 圆角方形，Windows 方形，托盘/菜单栏用单色版。</div>
+    <div class="usage">
+      <div class="appicon">
+        <div class="ic" style="background:linear-gradient(135deg,#3b82f6,#22d3ee);border-radius:26px">
+          <svg width="64" height="64" viewBox="0 0 96 96"><path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg>
+        </div><div class="nm">macOS Dock</div>
+      </div>
+      <div class="appicon">
+        <div class="ic" style="background:linear-gradient(135deg,#3b82f6,#22d3ee);border-radius:14px">
+          <svg width="64" height="64" viewBox="0 0 96 96"><path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg>
+        </div><div class="nm">Windows 桌面</div>
+      </div>
+      <div class="appicon">
+        <div class="ic" style="background:#0b1220;border:1px solid var(--line)">
+          <svg width="44" height="44" viewBox="0 0 96 96"><path d="M30 40 V30 H40" stroke="#8595b8" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M66 56 V66 H56" stroke="#8595b8" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="48" cy="48" r="9" fill="#8595b8"/></svg>
+        </div><div class="nm">菜单栏/托盘（单色）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 Do / Don't -->
+  <div class="sec">
+    <h2><span class="num">6</span>使用规范 Do / Don't</h2>
+    <div class="rules">
+      <div class="rule ok"><div class="tag">✓ 推荐</div><div class="demo"><svg width="50" height="50" viewBox="0 0 96 96"><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g2)"/><path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg></div><div class="cap" style="margin-top:10px;font-size:12px;color:var(--muted)">保持比例与安全边距</div></div>
+      <div class="rule ok"><div class="tag">✓ 推荐</div><div class="demo" style="background:#f4f7ff"><svg width="50" height="50" viewBox="0 0 96 96"><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g2)"/><path d="M30 40 V30 H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M66 56 V66 H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg></div><div class="cap" style="margin-top:10px;font-size:12px;color:var(--muted)">深浅背景均可用对应版本</div></div>
+      <div class="rule no"><div class="tag">✕ 避免</div><div class="demo"><svg width="70" height="40" viewBox="0 0 96 96" preserveAspectRatio="none"><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g2)"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg></div><div class="cap" style="margin-top:10px;font-size:12px;color:var(--muted)">不要拉伸变形</div></div>
+      <div class="rule no"><div class="tag">✕ 避免</div><div class="demo"><svg width="50" height="50" viewBox="0 0 96 96"><rect x="10" y="10" width="76" height="76" rx="22" fill="#ec4899"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg></div><div class="cap" style="margin-top:10px;font-size:12px;color:var(--muted)">不要替换为粉嫩等非品牌色</div></div>
+    </div>
+  </div>
+
+  <div class="foot">Snapin 闪贴 · 品牌视觉规范 v1.0 · 可随品牌迭代更新</div>
+
+</div>
+</body>
+</html>

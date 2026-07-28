@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;user-select:none;font-family:system-ui,sans-serif}
+#bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+#mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1}
+#sel{position:fixed;border:2px solid #3b82f6;z-index:2;display:none;overflow:visible}
+#annotateCanvas{position:absolute;inset:0;z-index:5}
+#dim{position:fixed;background:#3b82f6;color:#fff;font:12px/1 ui-monospace,monospace;padding:3px 8px;border-radius:4px;z-index:3;display:none}
+/* Toolbar */
+.toolbar{position:fixed;display:flex;gap:3px;background:#111827;border:1px solid #1e293b;border-radius:10px;padding:5px 7px;z-index:20;display:none;box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 24px rgba(59,130,246,.35)}
+.tbtn{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;cursor:pointer;color:#8595b8;border:none;background:none;font-size:13px;transition:.12s;position:relative}
+.tbtn:hover{background:rgba(59,130,246,.2);color:#fff}
+.tbtn.active{background:linear-gradient(135deg,#3b82f6,#22d3ee);color:#fff}
+.tbtn.ok{color:#22c55e}.tbtn.no{color:#ef4444}
+.tbtn[title]::after{content:attr(title);position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;background:#0b1220;color:#8595b8;padding:2px 6px;border-radius:4px;opacity:0;pointer-events:none;transition:.15s}
+.tbtn:hover::after{opacity:1}
+.sep{width:1px;height:22px;background:#1e293b;margin:4px 2px}
+/* Props bar */
+.props{position:fixed;display:flex;align-items:center;gap:8px;background:#0f1626;border:1px solid #1e293b;border-radius:10px;padding:6px 12px;z-index:20;display:none}
+.sw{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.1s}
+.sw.on{border-color:#fff;transform:scale(1.15)}
+.size-dot{cursor:pointer;border-radius:50%;background:#60a5fa;opacity:.4;transition:.1s}
+.size-dot.on{opacity:1;box-shadow:0 0 6px rgba(96,165,250,.6)}
+.mode-btn{font-size:11px;padding:3px 8px;border-radius:5px;cursor:pointer;border:1px solid #1e293b;color:#8595b8;background:none;transition:.1s}
+.mode-btn.on{border-color:#3b82f6;color:#60a5fa;background:rgba(59,130,246,.1)}
+/* Text input overlay */
+#textInput{position:absolute;z-index:30;display:none;background:transparent;border:1px dashed #3b82f6;outline:none;color:#fff;font:bold 16px system-ui;padding:2px 4px;min-width:60px;min-height:24px;resize:none;overflow:hidden}
+/* Hint */
+#hint{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111827;color:#e5edff;font:13px/1.5 system-ui;padding:8px 16px;border-radius:8px;border:1px solid #1e293b;z-index:25;transition:.3s}
+#hint.hide{opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<img id="bg"/>
+<div id="mask"></div>
+<div id="sel">
+  <canvas id="annotateCanvas"></canvas>
+  <textarea id="textInput"></textarea>
+</div>
+<div id="dim"></div>
+<div class="toolbar" id="toolbar">
+  <button class="tbtn" data-tool="select" title="选择/移动">⊹</button>
+  <div class="sep"></div>
+  <button class="tbtn" data-tool="rect" title="矩形">▭</button>
+  <button class="tbtn" data-tool="ellipse" title="椭圆">◯</button>
+  <button class="tbtn" data-tool="arrow" title="箭头">→</button>
+  <button class="tbtn" data-tool="line" title="直线">╱</button>
+  <button class="tbtn" data-tool="pen" title="画笔">✎</button>
+  <button class="tbtn" data-tool="highlighter" title="荧光笔">🖍</button>
+  <button class="tbtn" data-tool="text" title="文字">T</button>
+  <button class="tbtn" data-tool="number" title="序号">①</button>
+  <button class="tbtn" data-tool="mosaic" title="马赛克">▦</button>
+  <button class="tbtn" data-tool="eraser" title="橡皮擦">⌫</button>
+  <div class="sep"></div>
+  <button class="tbtn" id="btnUndo" title="撤销 ⌘Z">↺</button>
+  <button class="tbtn" id="btnRedo" title="重做 ⌘⇧Z">↻</button>
+  <div class="sep"></div>
+  <button class="tbtn ok" id="btnOk" title="确认 Enter">✓</button>
+  <button class="tbtn" id="btnSave" title="保存文件">💾</button>
+  <button class="tbtn no" id="btnCancel" title="取消 Esc">✕</button>
+</div>
+<div class="props" id="props">
+  <span style="font-size:10px;color:#8595b8">颜色</span>
+  <div class="sw on" data-color="#ef4444" style="background:#ef4444"></div>
+  <div class="sw" data-color="#f59e0b" style="background:#f59e0b"></div>
+  <div class="sw" data-color="#22c55e" style="background:#22c55e"></div>
+  <div class="sw" data-color="#3b82f6" style="background:#3b82f6"></div>
+  <div class="sw" data-color="#22d3ee" style="background:#22d3ee"></div>
+  <div class="sw" data-color="#ffffff" style="background:#ffffff"></div>
+  <div class="sw" data-color="#000000" style="background:#000000;border:1px solid #333"></div>
+  <div style="width:1px;height:14px;background:#1e293b"></div>
+  <span style="font-size:10px;color:#8595b8">粗细</span>
+  <div class="size-dot" data-size="2" style="width:8px;height:8px"></div>
+  <div class="size-dot on" data-size="4" style="width:12px;height:12px"></div>
+  <div class="size-dot" data-size="6" style="width:16px;height:16px"></div>
+  <div style="width:1px;height:14px;background:#1e293b"></div>
+  <button class="mode-btn on" data-mode="stroke">描边</button>
+  <button class="mode-btn" data-mode="fill">填充</button>
+</div>
+<div id="hint">拖拽框选区域 · 框选后进入标注模式</div>
+
+<script>
+const { invoke } = window.__TAURI__.core;
+const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
+
+const params = new URLSearchParams(location.search);
+const imgB64 = params.get('img') || '';
+const bg = document.getElementById('bg');
+if (imgB64) bg.src = 'data:image/png;base64,' + decodeURIComponent(imgB64);
+
+const sel = document.getElementById('sel');
+const dim = document.getElementById('dim');
+const mask = document.getElementById('mask');
+const toolbar = document.getElementById('toolbar');
+const propsEl = document.getElementById('props');
+const hint = document.getElementById('hint');
+const canvas = document.getElementById('annotateCanvas');
+const ctx = canvas.getContext('2d');
+const textInput = document.getElementById('textInput');
+
+// ====== 阶段1：选区 ======
+let phase = 'select';
+let drawing = false, startX=0, startY=0, endX=0, endY=0;
+let selRect = {x:0,y:0,w:0,h:0};
+
+document.addEventListener('mousedown', e => {
+  if (phase !== 'select') return;
+  if (e.target.closest('.toolbar,.props')) return;
+  drawing = true; startX = e.clientX; startY = e.clientY;
+  sel.style.display = 'block'; mask.style.display = 'none'; hint.classList.add('hide');
+});
+document.addEventListener('mousemove', e => {
+  if (phase !== 'select' || !drawing) return;
+  endX = e.clientX; endY = e.clientY;
+  const x=Math.min(startX,endX),y=Math.min(startY,endY),w=Math.abs(endX-startX),h=Math.abs(endY-startY);
+  Object.assign(sel.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px'});
+  dim.style.display='block'; dim.style.left=x+'px'; dim.style.top=(y-24)+'px'; dim.textContent=w+' × '+h;
+});
+document.addEventListener('mouseup', () => {
+  if (phase !== 'select' || !drawing) return;
+  drawing = false;
+  const x=Math.min(startX,endX),y=Math.min(startY,endY),w=Math.abs(endX-startX),h=Math.abs(endY-startY);
+  if (w > 10 && h > 10) { selRect={x,y,w,h}; enterAnnotateMode(); }
+});
+
+function enterAnnotateMode() {
+  phase = 'annotate';
+  canvas.width = selRect.w; canvas.height = selRect.h;
+  toolbar.style.display = 'flex'; toolbar.style.left = selRect.x+'px'; toolbar.style.top = (selRect.y+selRect.h+8)+'px';
+  propsEl.style.display = 'flex'; propsEl.style.left = selRect.x+'px'; propsEl.style.top = (selRect.y-38)+'px';
+  dim.style.display = 'none';
+  setTool('rect');
+}
+
+// ====== 标注引擎 ======
+let currentTool = 'rect';
+let currentColor = '#ef4444';
+let currentSize = 4;
+let fillMode = false; // false=stroke, true=fill
+let annotations = [];
+let undoStack = [];
+let numberCount = 1;
+let selectedIdx = -1; // 当前选中的标注索引
+let isDrawing = false, dStartX=0, dStartY=0;
+let penPoints = [];
+let dragOffset = null; // {dx, dy} for moving
+
+// 工具切换
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tbtn[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool===t));
+  selectedIdx = -1;
+  canvas.style.cursor = t==='select'?'default':t==='eraser'?'crosshair':t==='text'?'text':'crosshair';
+  redraw();
+}
+document.querySelectorAll('.tbtn[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
+
+// 颜色
+document.querySelectorAll('.sw').forEach(s => s.onclick = function(){
+  document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on'); currentColor = this.dataset.color;
+});
+// 粗细
+document.querySelectorAll('.size-dot').forEach(s => s.onclick = function(){
+  document.querySelectorAll('.size-dot').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on'); currentSize = parseInt(this.dataset.size);
+});
+// 描边/填充
+document.querySelectorAll('.mode-btn').forEach(b => b.onclick = function(){
+  document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on'); fillMode = this.dataset.mode === 'fill';
+});
+
+// ====== Canvas 事件 ======
+canvas.addEventListener('mousedown', e => {
+  const ox = e.offsetX, oy = e.offsetY;
+
+  // 文字工具：创建 inline 输入
+  if (currentTool === 'text') { showTextInput(ox, oy); return; }
+  // 序号
+  if (currentTool === 'number') {
+    pushAnnotation({type:'number',x:ox,y:oy,num:numberCount++,color:currentColor,size:currentSize});
+    return;
+  }
+  // 选择工具：点击选中/拖动
+  if (currentTool === 'select') {
+    const idx = hitTest(ox, oy);
+    selectedIdx = idx;
+    if (idx >= 0) {
+      const a = annotations[idx];
+      dragOffset = {dx: ox - (a.x||a.sx||0), dy: oy - (a.y||a.sy||0)};
+      canvas.style.cursor = 'move';
+    }
+    redraw(); return;
+  }
+  // 橡皮擦：点击删除
+  if (currentTool === 'eraser') {
+    const idx = hitTest(ox, oy);
+    if (idx >= 0) { undoStack = []; annotations.splice(idx, 1); redraw(); }
+    return;
+  }
+  // 其他绘图工具
+  isDrawing = true; dStartX = ox; dStartY = oy;
+  penPoints = [{x:ox,y:oy}];
+});
+
+canvas.addEventListener('mousemove', e => {
+  const ox = e.offsetX, oy = e.offsetY;
+  // 拖动标注
+  if (currentTool === 'select' && dragOffset && selectedIdx >= 0) {
+    const a = annotations[selectedIdx];
+    const nx = ox - dragOffset.dx, ny = oy - dragOffset.dy;
+    if (a.type === 'arrow' || a.type === 'line') {
+      const ddx = nx - a.sx, ddy = ny - a.sy;
+      a.sx += ddx; a.sy += ddy; a.ex += ddx; a.ey += ddy;
+    } else if (a.type === 'pen' || a.type === 'highlighter') {
+      const ddx = nx - a.points[0].x, ddy = ny - a.points[0].y;
+      a.points.forEach(p => {p.x+=ddx; p.y+=ddy;});
+    } else { a.x = nx; a.y = ny; }
+    redraw(); return;
+  }
+  if (!isDrawing) return;
+  if (currentTool === 'pen' || currentTool === 'highlighter') {
+    penPoints.push({x:ox,y:oy}); redraw(); drawStrokePreview(penPoints);
+  } else { redraw(); drawShapePreview(ox, oy); }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (currentTool === 'select') { dragOffset = null; canvas.style.cursor = 'default'; return; }
+  if (!isDrawing) return;
+  isDrawing = false;
+  const ex = e.offsetX, ey = e.offsetY;
+  if (currentTool === 'pen' || currentTool === 'highlighter') {
+    if (penPoints.length > 1) pushAnnotation({type:currentTool, points:[...penPoints], color:currentColor, size:currentTool==='highlighter'?currentSize*3:currentSize, opacity:currentTool==='highlighter'?0.4:1});
+  } else if (currentTool === 'mosaic') {
+    const x=Math.min(dStartX,ex),y=Math.min(dStartY,ey),w=Math.abs(ex-dStartX),h=Math.abs(ey-dStartY);
+    if(w>3&&h>3) pushAnnotation({type:'mosaic',x,y,w,h});
+  } else {
+    const shape = {type:currentTool,x:Math.min(dStartX,ex),y:Math.min(dStartY,ey),
+      w:Math.abs(ex-dStartX),h:Math.abs(ey-dStartY),sx:dStartX,sy:dStartY,ex,ey,
+      color:currentColor,size:currentSize,fill:fillMode};
+    if(shape.w>3||shape.h>3) pushAnnotation(shape);
+  }
+  redraw();
+});
+
+function pushAnnotation(a) { annotations.push(a); undoStack = []; redraw(); }
+
+// ====== 文字输入 ======
+function showTextInput(x, y) {
+  textInput.style.display = 'block';
+  textInput.style.left = x + 'px'; textInput.style.top = y + 'px';
+  textInput.style.color = currentColor;
+  textInput.style.fontSize = Math.max(14, currentSize*4) + 'px';
+  textInput.value = '';
+  textInput.focus();
+}
+textInput.addEventListener('blur', () => {
+  if (textInput.value.trim()) {
+    pushAnnotation({type:'text', x:parseInt(textInput.style.left), y:parseInt(textInput.style.top)+parseInt(textInput.style.fontSize),
+      text:textInput.value, color:currentColor, size:Math.max(14,currentSize*4)});
+  }
+  textInput.style.display = 'none';
+});
+textInput.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();textInput.blur();} });
+
+// ====== 碰撞检测（用于选择/橡皮擦）======
+function hitTest(x, y) {
+  for (let i = annotations.length-1; i >= 0; i--) {
+    const a = annotations[i];
+    if (a.type==='rect'||a.type==='ellipse'||a.type==='mosaic') {
+      if(x>=a.x&&x<=a.x+a.w&&y>=a.y&&y<=a.y+a.h) return i;
+    } else if (a.type==='arrow'||a.type==='line') {
+      if(distToSegment(x,y,a.sx,a.sy,a.ex,a.ey)<8) return i;
+    } else if (a.type==='pen'||a.type==='highlighter') {
+      for(const p of a.points) if(Math.hypot(x-p.x,y-p.y)<10) return i;
+    } else if (a.type==='text') {
+      const tw = ctx.measureText(a.text).width||a.text.length*a.size*0.6;
+      if(x>=a.x&&x<=a.x+tw&&y>=a.y-a.size&&y<=a.y) return i;
+    } else if (a.type==='number') {
+      if(Math.hypot(x-a.x,y-a.y)<Math.max(14,a.size*3)) return i;
+    }
+  }
+  return -1;
+}
+function distToSegment(px,py,x1,y1,x2,y2){const A=px-x1,B=py-y1,C=x2-x1,D=y2-y1;const d=C*C+D*D;let t=d?Math.max(0,Math.min(1,(A*C+B*D)/d)):0;return Math.hypot(px-(x1+t*C),py-(y1+t*D));}
+
+// ====== 绘制 ======
+function drawStrokePreview(pts) {
+  ctx.beginPath(); ctx.strokeStyle=currentColor; ctx.lineWidth=currentTool==='highlighter'?currentSize*3:currentSize;
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=currentTool==='highlighter'?0.4:1;
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke(); ctx.globalAlpha=1;
+}
+function drawShapePreview(ex, ey) {
+  const x=Math.min(dStartX,ex),y=Math.min(dStartY,ey),w=Math.abs(ex-dStartX),h=Math.abs(ey-dStartY);
+  ctx.strokeStyle=currentColor; ctx.fillStyle=currentColor; ctx.lineWidth=currentSize;
+  if(currentTool==='rect'){fillMode?ctx.fillRect(x,y,w,h):ctx.strokeRect(x,y,w,h);}
+  else if(currentTool==='ellipse'){ctx.beginPath();ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,Math.PI*2);fillMode?ctx.fill():ctx.stroke();}
+  else if(currentTool==='arrow'){drawArrow(ctx,dStartX,dStartY,ex,ey,currentColor,currentSize);}
+  else if(currentTool==='line'){ctx.beginPath();ctx.moveTo(dStartX,dStartY);ctx.lineTo(ex,ey);ctx.stroke();}
+  else if(currentTool==='mosaic'){ctx.fillStyle='rgba(128,128,128,.4)';ctx.fillRect(x,y,w,h);}
+}
+
+function redraw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  annotations.forEach((a,i) => {
+    ctx.save();
+    ctx.strokeStyle=a.color||currentColor; ctx.fillStyle=a.color||currentColor;
+    ctx.lineWidth=a.size||currentSize; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.globalAlpha=a.opacity||1;
+
+    if(a.type==='rect'){a.fill?ctx.fillRect(a.x,a.y,a.w,a.h):ctx.strokeRect(a.x,a.y,a.w,a.h);}
+    else if(a.type==='ellipse'){ctx.beginPath();ctx.ellipse(a.x+a.w/2,a.y+a.h/2,a.w/2,a.h/2,0,0,Math.PI*2);a.fill?ctx.fill():ctx.stroke();}
+    else if(a.type==='arrow'){drawArrow(ctx,a.sx,a.sy,a.ex,a.ey,a.color,a.size);}
+    else if(a.type==='line'){ctx.beginPath();ctx.moveTo(a.sx,a.sy);ctx.lineTo(a.ex,a.ey);ctx.stroke();}
+    else if(a.type==='pen'||a.type==='highlighter'){ctx.beginPath();a.points.forEach((p,j)=>j===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();}
+    else if(a.type==='text'){ctx.font=`bold ${a.size}px system-ui`;ctx.globalAlpha=1;ctx.fillText(a.text,a.x,a.y);}
+    else if(a.type==='number'){
+      const r=Math.max(14,a.size*3);ctx.beginPath();ctx.arc(a.x,a.y,r,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font=`bold ${r}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(a.num,a.x,a.y);ctx.textAlign='start';ctx.textBaseline='alphabetic';
+    }
+    else if(a.type==='mosaic'){drawMosaic(a.x,a.y,a.w,a.h);}
+
+    // 选中高亮
+    if(i===selectedIdx){
+      ctx.strokeStyle='#3b82f6';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      const bx=a.x||(a.sx<a.ex?a.sx:a.ex)-4, by=a.y||(a.sy<a.ey?a.sy:a.ey)-4;
+      const bw=a.w||(Math.abs(a.ex-a.sx)+8), bh=a.h||(Math.abs(a.ey-a.sy)+8);
+      ctx.strokeRect(bx-4,by-4,bw+8,bh+8);ctx.setLineDash([]);
+    }
+    ctx.restore();
+  });
+}
+
+function drawArrow(c,x1,y1,x2,y2,color,size){
+  const angle=Math.atan2(y2-y1,x2-x1),headLen=Math.max(12,size*3);
+  c.strokeStyle=color;c.fillStyle=color;c.lineWidth=size;
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+  c.beginPath();c.moveTo(x2,y2);
+  c.lineTo(x2-headLen*Math.cos(angle-Math.PI/6),y2-headLen*Math.sin(angle-Math.PI/6));
+  c.lineTo(x2-headLen*Math.cos(angle+Math.PI/6),y2-headLen*Math.sin(angle+Math.PI/6));
+  c.closePath();c.fill();
+}
+function drawMosaic(x,y,w,h){
+  const bs=8;
+  for(let bx=x;bx<x+w;bx+=bs)for(let by=y;by<y+h;by+=bs){
+    const g=Math.floor(Math.random()*60)+100;
+    ctx.fillStyle=`rgb(${g},${g},${g})`;ctx.fillRect(bx,by,bs,bs);
+  }
+}
+
+// ====== 工具栏按钮 ======
+document.getElementById('btnUndo').onclick = () => { if(annotations.length){undoStack.push(annotations.pop());selectedIdx=-1;redraw();} };
+document.getElementById('btnRedo').onclick = () => { if(undoStack.length){annotations.push(undoStack.pop());redraw();} };
+
+async function confirm(){
+  const fc = document.createElement('canvas'); fc.width=selRect.w; fc.height=selRect.h;
+  const fctx=fc.getContext('2d');
+  fctx.drawImage(bg, selRect.x,selRect.y,selRect.w,selRect.h, 0,0,selRect.w,selRect.h);
+  fctx.drawImage(canvas,0,0);
+  const b64=fc.toDataURL('image/png').split(',')[1];
+  try{await invoke('save_region_capture',{x:0,y:0,w:selRect.w,h:selRect.h,imgBase64:b64});}catch(e){console.error(e);}
+  closeWindow();
+}
+function closeWindow(){getCurrentWebviewWindow().close();}
+
+document.getElementById('btnOk').onclick = confirm;
+document.getElementById('btnSave').onclick = confirm;
+document.getElementById('btnCancel').onclick = closeWindow;
+
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') closeWindow();
+  if(e.key==='Enter'&&phase==='annotate'&&document.activeElement!==textInput) confirm();
+  if((e.metaKey||e.ctrlKey)&&e.key==='z'){
+    e.preventDefault();
+    if(e.shiftKey){if(undoStack.length){annotations.push(undoStack.pop());redraw();}}
+    else{if(annotations.length){undoStack.push(annotations.pop());selectedIdx=-1;redraw();}}
+  }
+  // Delete 键删除选中
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedIdx>=0&&document.activeElement!==textInput){
+    annotations.splice(selectedIdx,1);selectedIdx=-1;redraw();
+  }
+});
+</script>
+</body>
+</html>

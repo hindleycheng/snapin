@@ -1,0 +1,88 @@
+:root {
+  /* Snapin 科技蓝主题 */
+  --bg: #0a0e1a;
+  --panel: #111827;
+  --panel-2: #0f1626;
+  --line: #1e293b;
+  --brand: #3b82f6;
+  --brand-2: #60a5fa;
+  --cyan: #22d3ee;
+  --txt: #e5edff;
+  --muted: #8595b8;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --radius: 12px;
+  --glow: 0 0 24px rgba(59, 130, 246, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+  background: radial-gradient(1200px 600px at 20% -10%, #13203a 0%, var(--bg) 55%);
+  color: var(--txt);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+a {
+  color: var(--brand-2);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand), var(--cyan));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-weight: 600;
+  box-shadow: var(--glow);
+  transition: 0.2s;
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 18px;
+  transition: 0.2s;
+}
+.btn-ghost:hover {
+  color: var(--txt);
+  border-color: var(--brand);
+}
+
+.input {
+  background: #0b1220;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--txt);
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--brand);
+}

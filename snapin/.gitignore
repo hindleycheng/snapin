@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+src-tauri/target/
+snapin-old/
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+server/snapin.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
+
+# Secrets
+*.pem
+*.key
+*.p12
+
+# Tauri
+src-tauri/gen/
+snapin/copy_old.sh
+snapin/update_app.sh
+*.dmg

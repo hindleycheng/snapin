@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Snapin 闪贴 · 帮助中心</title>
+<style>
+:root{--bg:#0a0e1a;--panel:#111827;--line:#1e293b;--brand:#3b82f6;--cyan:#22d3ee;--txt:#e5edff;--muted:#8595b8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"SF Pro Display","Segoe UI","PingFang SC",system-ui,sans-serif;background:var(--bg);color:var(--txt);line-height:1.7}
+.layout{display:flex;min-height:100vh}
+/* Sidebar */
+.sidebar{width:240px;background:var(--panel);border-right:1px solid var(--line);padding:24px 16px;position:fixed;top:0;left:0;bottom:0;overflow-y:auto}
+.sidebar .brand{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;margin-bottom:24px}
+.sidebar .brand svg{width:28px;height:28px}
+.sidebar .brand .in{background:linear-gradient(135deg,var(--brand),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav-section{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px;padding-left:8px}
+.nav-link{display:block;padding:8px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;transition:.15s;text-decoration:none;margin-bottom:2px}
+.nav-link:hover{background:rgba(255,255,255,.04);color:var(--txt)}
+.nav-link.active{background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(34,211,238,.1));color:#fff}
+/* Main */
+.main{margin-left:240px;padding:40px 48px;max-width:800px}
+.main h1{font-size:28px;font-weight:800;margin-bottom:8px}
+.main .subtitle{color:var(--muted);margin-bottom:32px}
+.main h2{font-size:20px;margin:36px 0 12px;padding-top:20px;border-top:1px solid var(--line)}
+.main h2:first-of-type{border:none;padding-top:0}
+.main h3{font-size:16px;margin:20px 0 8px;color:var(--brand)}
+.main p{margin-bottom:12px;color:#c8d6ee}
+.main ul,.main ol{margin:8px 0 16px 20px;color:#c8d6ee}
+.main li{margin-bottom:6px}
+.main code{background:#0b1220;padding:2px 7px;border-radius:5px;font-size:13px;font-family:ui-monospace,monospace;color:var(--cyan);border:1px solid var(--line)}
+.main .kbd{display:inline-block;background:#0b1220;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 8px;font-size:12px;font-family:ui-monospace,monospace;color:var(--brand);margin:0 2px}
+.main table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:13px}
+.main th,.main td{padding:10px 12px;border:1px solid var(--line);text-align:left}
+.main th{background:var(--panel);color:var(--muted);font-weight:600}
+.main .tip{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:13px}
+.main .tip::before{content:"💡 ";font-size:14px}
+.main .warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:13px}
+.main .warn::before{content:"⚠️ ";font-size:14px}
+@media(max-width:768px){.sidebar{display:none}.main{margin-left:0;padding:20px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand">
+    <svg viewBox="0 0 96 96" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g)"/><path d="M30 40V30H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M66 56V66H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg>
+    Snap<span class="in">in</span> 帮助
+  </div>
+  <div class="nav-section">入门</div>
+  <a class="nav-link active" href="#quickstart">快速开始</a>
+  <a class="nav-link" href="#activate">激活授权</a>
+  <div class="nav-section">功能</div>
+  <a class="nav-link" href="#capture">区域截图</a>
+  <a class="nav-link" href="#annotate">标注编辑</a>
+  <a class="nav-link" href="#pin">贴图钉屏</a>
+  <a class="nav-link" href="#color">拾色器</a>
+  <a class="nav-link" href="#scroll">长截图</a>
+  <a class="nav-link" href="#history">历史记录</a>
+  <div class="nav-section">参考</div>
+  <a class="nav-link" href="#shortcuts">快捷键速查</a>
+  <a class="nav-link" href="#faq">常见问题</a>
+</aside>
+
+<main class="main">
+<h1>Snapin 闪贴 · 帮助中心</h1>
+<p class="subtitle">截了就贴，贴了就用。跨平台截图与标注工具使用指南。</p>
+
+<h2 id="quickstart">快速开始</h2>
+<h3>1. 下载安装</h3>
+<p>从 <a href="https://snapin.app">官网</a> 下载对应系统的安装包：</p>
+<ul>
+  <li><strong>macOS</strong>：下载 <code>.dmg</code>，拖入 Applications 文件夹</li>
+  <li><strong>Windows</strong>：下载 <code>.exe</code>，双击安装</li>
+</ul>
+<div class="tip">首次打开 macOS 版本时，系统可能提示"无法验证开发者"。前往「系统设置 → 隐私与安全性」点击"仍要打开"即可。</div>
+
+<h3>2. 授予屏幕录制权限（仅 macOS）</h3>
+<p>首次截图时，macOS 会提示授予"屏幕录制"权限。点击允许后需要重启 Snapin。</p>
+
+<h3>3. 开始使用</h3>
+<p>安装后 Snapin 常驻在系统托盘/菜单栏。按下全局快捷键即可截图：</p>
+<ul>
+  <li>Mac：<span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">A</span></li>
+  <li>Win：<span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">A</span></li>
+</ul>
+
+<h2 id="activate">激活授权</h2>
+<h3>免费版 vs 专业版</h3>
+<table>
+  <tr><th>功能</th><th>免费版</th><th>专业版（¥79）</th></tr>
+  <tr><td>区域/全屏截图</td><td>✓</td><td>✓</td></tr>
+  <tr><td>基础标注（矩形、箭头、文字）</td><td>✓</td><td>✓</td></tr>
+  <tr><td>贴图钉屏</td><td>—</td><td>✓</td></tr>
+  <tr><td>拾色器</td><td>—</td><td>✓</td></tr>
+  <tr><td>长截图</td><td>—</td><td>✓</td></tr>
+  <tr><td>历史记录</td><td>—</td><td>✓</td></tr>
+  <tr><td>荧光笔 / 序号标记</td><td>—</td><td>✓</td></tr>
+</table>
+
+<h3>如何激活</h3>
+<ol>
+  <li>打开 Snapin → 侧边栏点击「授权激活」</li>
+  <li>输入购买时的邮箱</li>
+  <li>输入授权码（格式：<code>SNPN-XXXX-XXXX-XXXX</code>）</li>
+  <li>点击"立即激活"</li>
+</ol>
+<div class="tip">激活成功后，本机写入凭证文件，之后<strong>无需联网</strong>即可使用全部功能。</div>
+<div class="warn">一个授权码最多可激活 2 台设备。如需迁移，在「设置 → 授权」中点击"解绑本机"后即可在新设备激活。</div>
+
+<h2 id="capture">区域截图</h2>
+<p>按下 <span class="kbd">⌘⇧A</span> 后屏幕进入取景模式：</p>
+<ol>
+  <li><strong>拖拽</strong>绘制矩形选区</li>
+  <li>选区边缘 <strong>8 个手柄</strong>可微调大小</li>
+  <li><strong>方向键</strong>微调 1px，<span class="kbd">Shift</span>+方向键 10px</li>
+  <li>选区确定后自动进入标注模式</li>
+</ol>
+<p>不标注直接输出：按 <span class="kbd">Enter</span> 复制到剪贴板，按 <span class="kbd">Esc</span> 取消。</p>
+
+<h2 id="annotate">标注编辑</h2>
+<p>框选后出现工具栏，提供 10 种工具：</p>
+<table>
+  <tr><th>工具</th><th>说明</th><th>操作</th></tr>
+  <tr><td>选择 ⊹</td><td>选中并移动已有标注</td><td>点击标注 → 拖动</td></tr>
+  <tr><td>矩形 ▭</td><td>绘制矩形框</td><td>拖拽</td></tr>
+  <tr><td>椭圆 ◯</td><td>绘制椭圆/圆</td><td>拖拽</td></tr>
+  <tr><td>箭头 →</td><td>带箭头的指示线</td><td>从起点拖到终点</td></tr>
+  <tr><td>直线 ╱</td><td>不带箭头的线段</td><td>拖拽</td></tr>
+  <tr><td>画笔 ✎</td><td>自由手绘</td><td>按住拖动</td></tr>
+  <tr><td>荧光笔 🖍</td><td>半透明宽笔高亮</td><td>按住拖动</td></tr>
+  <tr><td>文字 T</td><td>输入文字标注</td><td>点击位置 → 打字 → Enter</td></tr>
+  <tr><td>序号 ①</td><td>自动递增数字圆圈</td><td>点击放置</td></tr>
+  <tr><td>马赛克 ▦</td><td>打码隐私区域</td><td>拖拽区域</td></tr>
+  <tr><td>橡皮擦 ⌫</td><td>点击删除一个标注</td><td>点击目标标注</td></tr>
+</table>
+<p><strong>属性栏</strong>位于选区上方：可切换颜色（7色）、粗细（3档）、描边/填充模式。</p>
+<p><strong>撤销/重做</strong>：<span class="kbd">⌘Z</span> / <span class="kbd">⌘⇧Z</span>。<strong>删除选中</strong>：<span class="kbd">Delete</span> 键。</p>
+
+<h2 id="pin">贴图钉屏</h2>
+<p>将截图作为<strong>始终置顶的浮窗</strong>贴在屏幕上，用于对照参考。</p>
+<ul>
+  <li><span class="kbd">F3</span> 将剪贴板中的图片贴出</li>
+  <li><strong>拖动</strong>标题栏移动位置</li>
+  <li><strong>滚轮</strong>缩放大小</li>
+  <li>点击 <strong>◐</strong> 切换透明度（100% / 70% / 40%）</li>
+  <li>点击 <strong>✕</strong> 关闭贴图</li>
+</ul>
+<div class="tip">可以同时贴多张图，每张独立操作。研发对照设计稿、教学演示时非常实用。</div>
+
+<h2 id="color">拾色器</h2>
+<p>屏幕任意位置取色，输出 HEX / RGB。</p>
+<ol>
+  <li>按 <span class="kbd">⌘⇧C</span>（或菜单栏 → 拾色器）</li>
+  <li>移动鼠标，放大镜实时显示 8x 像素 + 颜色值</li>
+  <li><strong>单击</strong>取色 → 自动复制 HEX 到剪贴板 → 退出</li>
+  <li><span class="kbd">Esc</span> 取消</li>
+</ol>
+
+<h2 id="scroll">长截图</h2>
+<p>自动滚动并拼接为一张长图（最多 30 屏）。</p>
+<ol>
+  <li>将目标窗口置于前台（如浏览器网页、长文档）</li>
+  <li>在 Snapin 菜单/主页选择"长截图"</li>
+  <li>点击"开始" → Snapin 自动滚动+逐帧截取+智能拼接</li>
+  <li>完成后显示预览，自动保存到 <code>~/Pictures/Snapin/</code></li>
+</ol>
+<div class="warn">长截图期间请勿操作鼠标/键盘，否则可能导致拼接不准。</div>
+
+<h2 id="history">历史记录</h2>
+<p>所有截图自动保存在本地历史库（<strong>专业版功能</strong>）。</p>
+<ul>
+  <li>侧边栏 → 历史记录 → 查看所有截图缩略图</li>
+  <li>显示文件名、尺寸、时间、是否有标注</li>
+  <li>可删除单条记录</li>
+</ul>
+<div class="tip">截图与历史记录<strong>全部存储在本机</strong>，Snapin 绝不上传任何数据到云端。</div>
+
+<h2 id="shortcuts">快捷键速查</h2>
+<table>
+  <tr><th>操作</th><th>macOS</th><th>Windows</th></tr>
+  <tr><td>区域截图</td><td><span class="kbd">⌘⇧A</span></td><td><span class="kbd">Ctrl+Shift+A</span></td></tr>
+  <tr><td>全屏截图</td><td><span class="kbd">⌘⇧F</span></td><td><span class="kbd">Ctrl+Shift+F</span></td></tr>
+  <tr><td>贴图</td><td><span class="kbd">F3</span></td><td><span class="kbd">F3</span></td></tr>
+  <tr><td>拾色器</td><td><span class="kbd">⌘⇧C</span></td><td><span class="kbd">Ctrl+Shift+C</span></td></tr>
+  <tr><td>确认截图</td><td><span class="kbd">Enter</span></td><td><span class="kbd">Enter</span></td></tr>
+  <tr><td>取消</td><td><span class="kbd">Esc</span></td><td><span class="kbd">Esc</span></td></tr>
+  <tr><td>撤销标注</td><td><span class="kbd">⌘Z</span></td><td><span class="kbd">Ctrl+Z</span></td></tr>
+  <tr><td>重做标注</td><td><span class="kbd">⌘⇧Z</span></td><td><span class="kbd">Ctrl+Shift+Z</span></td></tr>
+  <tr><td>删除选中标注</td><td><span class="kbd">Delete</span></td><td><span class="kbd">Delete</span></td></tr>
+</table>
+<p>所有快捷键可在「偏好设置 → 快捷键」中自定义。</p>
+
+<h2 id="faq">常见问题</h2>
+
+<h3>Q: macOS 提示"无法验证开发者"？</h3>
+<p>前往「系统设置 → 隐私与安全性」，找到 Snapin 点击"仍要打开"。这是 macOS 对非 App Store 应用的正常提示。</p>
+
+<h3>Q: 截图时画面黑屏？</h3>
+<p>macOS 需要授予"屏幕录制"权限。前往「系统设置 → 隐私与安全性 → 屏幕录制」，确保 Snapin 已勾选，然后重启应用。</p>
+
+<h3>Q: 可以在几台设备上使用？</h3>
+<p>一个授权码可激活 <strong>2 台设备</strong>（Mac/Win 通用）。需要迁移时在旧设备「设置 → 解绑本机」即可释放名额。</p>
+
+<h3>Q: 忘记授权码怎么办？</h3>
+<p>购买时授权码已发送到你的邮箱，搜索"Snapin"即可找到。如果邮件丢失，联系 support@snapin.app 提供购买邮箱验证后补发。</p>
+
+<h3>Q: 截图保存在哪里？</h3>
+<p>默认保存到 <code>~/Pictures/Snapin/</code>（macOS）或 <code>我的图片\Snapin\</code>（Windows），可在设置中更改。</p>
+
+<h3>Q: 数据会上传吗？</h3>
+<p><strong>绝不会。</strong>所有截图、标注、历史记录均存储在本机，Snapin 不收集任何使用数据。唯一的网络请求是首次激活时校验授权码（之后离线可用）和检查更新。</p>
+
+<h3>Q: 如何更新？</h3>
+<p>Snapin 内置自动更新。检测到新版本时会弹窗提示，点击确认即可后台下载安装。也可从官网手动下载最新版覆盖安装。</p>
+
+</main>
+</div>
+
+<script>
+// 侧边栏高亮
+document.querySelectorAll('.nav-link').forEach(a => {
+  a.onclick = function(e) {
+    document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+  };
+});
+</script>
+</body>
+</html>

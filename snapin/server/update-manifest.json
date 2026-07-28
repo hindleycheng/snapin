@@ -1,0 +1,19 @@
+{
+  "version": "0.1.0",
+  "notes": "Snapin 闪贴 v0.1.0 首发版本",
+  "pub_date": "2026-07-28T00:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "REPLACE_WITH_SIGNATURE",
+      "url": "https://releases.snapin.app/download/Snapin_0.1.0_aarch64.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "REPLACE_WITH_SIGNATURE",
+      "url": "https://releases.snapin.app/download/Snapin_0.1.0_x64.app.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "REPLACE_WITH_SIGNATURE",
+      "url": "https://releases.snapin.app/download/Snapin_0.1.0_x64-setup.nsis.zip"
+    }
+  }
+}

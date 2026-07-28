@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;user-select:none;cursor:none}
+#bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+#loupe{position:fixed;width:160px;height:160px;border-radius:50%;border:3px solid #3b82f6;
+  overflow:hidden;pointer-events:none;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 20px rgba(59,130,246,.4)}
+#loupeCanvas{width:160px;height:160px}
+#crosshair{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to right,transparent 48.5%,rgba(59,130,246,.6) 48.5%,rgba(59,130,246,.6) 51.5%,transparent 51.5%),
+  linear-gradient(to bottom,transparent 48.5%,rgba(59,130,246,.6) 48.5%,rgba(59,130,246,.6) 51.5%,transparent 51.5%)}
+#info{position:fixed;pointer-events:none;z-index:11;background:#111827;border:1px solid #1e293b;
+  border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.6);min-width:140px}
+#colorBox{width:100%;height:28px;border-radius:6px;margin-bottom:8px;border:1px solid #1e293b}
+#hexVal{font:13px/1 ui-monospace,monospace;color:#e5edff;margin-bottom:4px}
+#rgbVal{font:11px/1 ui-monospace,monospace;color:#8595b8}
+#hint{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111827;color:#e5edff;
+  font:13px/1.5 system-ui;padding:8px 16px;border-radius:8px;border:1px solid #1e293b;z-index:12}
+</style>
+</head>
+<body>
+<img id="bg"/>
+<div id="loupe"><canvas id="loupeCanvas" width="160" height="160"></canvas><div id="crosshair"></div></div>
+<div id="info"><div id="colorBox"></div><div id="hexVal">#000000</div><div id="rgbVal">RGB(0, 0, 0)</div></div>
+<div id="hint">移动鼠标取色 · 点击复制色值 · Esc 退出</div>
+<script>
+const { invoke } = window.__TAURI__.core;
+const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
+const { writeText } = window.__TAURI__.clipboard || {};
+
+const params = new URLSearchParams(location.search);
+const imgB64 = params.get('img') || '';
+const bgEl = document.getElementById('bg');
+if (imgB64) bgEl.src = 'data:image/png;base64,' + decodeURIComponent(imgB64);
+
+const loupe = document.getElementById('loupe');
+const loupeCanvas = document.getElementById('loupeCanvas');
+const lctx = loupeCanvas.getContext('2d', {willReadFrequently:true});
+const info = document.getElementById('info');
+const colorBox = document.getElementById('colorBox');
+const hexVal = document.getElementById('hexVal');
+const rgbVal = document.getElementById('rgbVal');
+
+// 隐藏canvas 用于读像素
+const srcCanvas = document.createElement('canvas');
+const sctx = srcCanvas.getContext('2d', {willReadFrequently:true});
+
+bgEl.onload = () => {
+  srcCanvas.width = bgEl.naturalWidth;
+  srcCanvas.height = bgEl.naturalHeight;
+  sctx.drawImage(bgEl, 0, 0);
+};
+
+const ZOOM = 8; // 放大倍数
+const RADIUS = 80; // loupe 半径
+
+document.addEventListener('mousemove', (e) => {
+  const mx = e.clientX, my = e.clientY;
+  // 定位放大镜
+  loupe.style.left = (mx - RADIUS) + 'px';
+  loupe.style.top = (my - RADIUS) + 'px';
+  // 信息面板在放大镜下方
+  info.style.left = (mx - 70) + 'px';
+  info.style.top = (my + RADIUS + 12) + 'px';
+
+  // 从原图读取像素块绘制到放大镜
+  const scaleX = srcCanvas.width / window.innerWidth;
+  const scaleY = srcCanvas.height / window.innerHeight;
+  const sx = mx * scaleX;
+  const sy = my * scaleY;
+  const sampleSize = 160 / ZOOM;
+
+  lctx.clearRect(0, 0, 160, 160);
+  lctx.imageSmoothingEnabled = false;
+  lctx.drawImage(srcCanvas, sx - sampleSize/2, sy - sampleSize/2, sampleSize, sampleSize, 0, 0, 160, 160);
+
+  // 读中心像素颜色
+  const pixel = sctx.getImageData(Math.round(sx), Math.round(sy), 1, 1).data;
+  const r = pixel[0], g = pixel[1], b = pixel[2];
+  const hex = '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  colorBox.style.background = hex;
+  hexVal.textContent = hex.toUpperCase();
+  rgbVal.textContent = `RGB(${r}, ${g}, ${b})`;
+});
+
+document.addEventListener('click', async (e) => {
+  // 取色并复制到剪贴板
+  const scaleX = srcCanvas.width / window.innerWidth;
+  const scaleY = srcCanvas.height / window.innerHeight;
+  const pixel = sctx.getImageData(Math.round(e.clientX*scaleX), Math.round(e.clientY*scaleY), 1, 1).data;
+  const hex = '#' + [pixel[0],pixel[1],pixel[2]].map(v => v.toString(16).padStart(2,'0')).join('').toUpperCase();
+
+  // 尝试写入剪贴板
+  try {
+    if (navigator.clipboard) await navigator.clipboard.writeText(hex);
+  } catch(_) {}
+
+  // 通过 Rust 命令也存一份（可选）
+  try { await invoke('copy_color_to_clipboard', { color: hex }); } catch(_) {}
+
+  getCurrentWebviewWindow().close();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') getCurrentWebviewWindow().close();
+});
+</script>
+</body>
+</html>

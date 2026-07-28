@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snapin 闪贴 截图软件 · 高保真原型</title>
+<style>
+:root{
+  --bg:#0a0e1a; --panel:#111827; --panel2:#0f1626; --line:#1e293b;
+  --brand:#3b82f6; --brand2:#60a5fa; --cyan:#22d3ee; --txt:#e5edff;
+  --muted:#8595b8; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+  --glow:0 0 24px rgba(59,130,246,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"SF Pro Display","Segoe UI",system-ui,sans-serif;
+  background:radial-gradient(1200px 600px at 20% -10%,#13203a 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:28px}
+.wrap{max-width:1280px;margin:0 auto}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--brand),var(--cyan));
+  display:grid;place-items:center;box-shadow:var(--glow)}
+.logo svg{width:22px;height:22px}
+.head h1{font-size:22px;font-weight:700;letter-spacing:.5px}
+.head .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 22px}
+.tab{padding:9px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+  color:var(--muted);font-size:13px;cursor:pointer;transition:.2s;user-select:none}
+.tab:hover{border-color:var(--brand);color:var(--txt)}
+.tab.active{background:linear-gradient(135deg,rgba(59,130,246,.25),rgba(34,211,238,.15));
+  color:#fff;border-color:var(--brand);box-shadow:var(--glow)}
+.screen{display:none;animation:fade .35s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.caption{color:var(--muted);font-size:13px;margin:14px 4px 18px;line-height:1.7}
+.caption b{color:var(--brand2)}
+.frame{border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.5)}
+/* mac window chrome */
+.chrome{height:38px;background:linear-gradient(180deg,#1a2338,#141c2e);
+  display:flex;align-items:center;padding:0 14px;gap:8px;border-bottom:1px solid var(--line)}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+.chrome .title{margin-left:10px;font-size:12px;color:var(--muted)}
+.chrome .os{margin-left:auto;font-size:11px;color:var(--muted);
+  border:1px solid var(--line);padding:2px 8px;border-radius:6px}
+/* capture stage */
+.stage{position:relative;height:520px;background:
+  linear-gradient(135deg,#1b2a4a,#0e1830),
+  url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="none"/><circle cx="20" cy="20" r="1" fill="%23223"/></svg>');
+  overflow:hidden}
+.desktop-hint{position:absolute;inset:0;display:grid;place-items:center;
+  color:#33456a;font-size:15px;letter-spacing:2px}
+.mask{position:absolute;inset:0;background:rgba(6,10,20,.62)}
+.sel{position:absolute;border:2px solid var(--brand);box-shadow:0 0 0 9999px rgba(6,10,20,0);
+  background:transparent}
+.sel .clear{position:absolute;inset:0;box-shadow:0 0 20px rgba(59,130,246,.5) inset}
+.sel .handle{position:absolute;width:9px;height:9px;background:#fff;border:1px solid var(--brand);border-radius:2px}
+.sel .h-tl{left:-5px;top:-5px}.sel .h-tr{right:-5px;top:-5px}
+.sel .h-bl{left:-5px;bottom:-5px}.sel .h-br{right:-5px;bottom:-5px}
+.sel .h-t{left:50%;top:-5px;transform:translateX(-50%)}.sel .h-b{left:50%;bottom:-5px;transform:translateX(-50%)}
+.sel .h-l{left:-5px;top:50%;transform:translateY(-50%)}.sel .h-r{right:-5px;top:50%;transform:translateY(-50%)}
+.dim{position:absolute;top:-26px;left:0;background:var(--brand);color:#fff;
+  font-size:12px;padding:2px 8px;border-radius:5px;font-variant-numeric:tabular-nums}
+/* preview content inside selection */
+.shot{position:absolute;inset:0;background:linear-gradient(160deg,#233a63,#16233f);
+  display:flex;flex-direction:column;padding:16px}
+.shot .bar{height:8px;width:60%;background:#2f4d7d;border-radius:4px;margin-bottom:10px}
+.shot .bar.s{width:35%}
+/* toolbar */
+.toolbar{position:absolute;display:flex;gap:4px;background:var(--panel);
+  border:1px solid var(--line);border-radius:11px;padding:6px;
+  box-shadow:0 12px 30px rgba(0,0,0,.55),var(--glow)}
+.tbtn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;
+  cursor:pointer;color:var(--muted);transition:.15s;position:relative}
+.tbtn:hover{background:rgba(59,130,246,.15);color:var(--txt)}
+.tbtn.on{background:linear-gradient(135deg,var(--brand),var(--cyan));color:#fff}
+.tbtn svg{width:18px;height:18px}
+.tb-sep{width:1px;background:var(--line);margin:4px 3px}
+.tbtn.ok{color:var(--ok)}.tbtn.no{color:var(--danger)}
+/* property row */
+.props{position:absolute;display:flex;align-items:center;gap:10px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:12px;color:var(--muted)}
+.swatch{display:flex;gap:6px}.sw{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.sw.sel{border-color:#fff}
+.tag{position:absolute;background:var(--brand);color:#fff;font-size:11px;
+  padding:3px 9px;border-radius:20px;box-shadow:var(--glow);white-space:nowrap;
+  border:1px solid rgba(255,255,255,.25)}
+.tag::before{content:'';position:absolute;width:8px;height:8px;background:var(--brand);
+  transform:rotate(45deg);left:-3px;top:50%;margin-top:-4px}
+/* generic panel UI */
+.grid2{display:grid;grid-template-columns:230px 1fr;min-height:520px}
+.side{background:var(--panel2);border-right:1px solid var(--line);padding:18px 12px}
+.side .item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:9px;
+  color:var(--muted);font-size:14px;cursor:pointer;margin-bottom:4px}
+.side .item:hover{background:rgba(255,255,255,.04);color:var(--txt)}
+.side .item.on{background:linear-gradient(135deg,rgba(59,130,246,.22),rgba(34,211,238,.12));color:#fff}
+.side .item svg{width:18px;height:18px}
+.body{padding:26px 30px;background:var(--panel)}
+.body h2{font-size:17px;margin-bottom:4px}
+.body .desc{color:var(--muted);font-size:13px;margin-bottom:22px}
+.field{display:flex;justify-content:space-between;align-items:center;
+  padding:15px 0;border-bottom:1px solid var(--line)}
+.field .lb{font-size:14px}.field .hint{font-size:12px;color:var(--muted);margin-top:3px}
+.kbd{background:#0b1220;border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:6px;padding:4px 10px;font-size:12px;font-family:ui-monospace,monospace;color:var(--brand2)}
+.inp{background:#0b1220;border:1px solid var(--line);border-radius:8px;
+  padding:8px 12px;color:var(--txt);font-size:13px;min-width:220px}
+.switch{width:44px;height:24px;border-radius:20px;background:#25324d;position:relative;cursor:pointer}
+.switch.on{background:var(--brand)}
+.switch i{position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s}
+.switch.on i{left:23px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg span{padding:7px 14px;font-size:13px;color:var(--muted);cursor:pointer}
+.seg span.on{background:var(--brand);color:#fff}
+/* history grid */
+.hgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:6px}
+.hcard{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel2);cursor:pointer;transition:.2s}
+.hcard:hover{border-color:var(--brand);transform:translateY(-3px);box-shadow:var(--glow)}
+.hcard .thumb{height:104px;background:linear-gradient(160deg,#22385f,#14213c);position:relative}
+.hcard .thumb .mk{position:absolute;border:2px solid var(--brand);border-radius:4px}
+.hcard .meta{padding:9px 11px;font-size:11px;color:var(--muted)}
+.hcard .meta b{color:var(--txt);font-size:12px;display:block;margin-bottom:2px}
+/* pin floating */
+.pin{position:absolute;border-radius:10px;overflow:hidden;border:1px solid var(--brand);
+  box-shadow:0 18px 50px rgba(0,0,0,.6),var(--glow)}
+.pin .pintop{height:26px;background:rgba(59,130,246,.18);display:flex;align-items:center;
+  padding:0 8px;gap:6px;font-size:11px;color:var(--brand2)}
+.pin .pinbody{background:linear-gradient(160deg,#26406b,#16233f);padding:14px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;padding:14px 16px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:12px}
+.legend .l{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.legend .k{background:#0b1220;border:1px solid var(--line);border-radius:5px;padding:2px 8px;
+  font-family:ui-monospace,monospace;color:var(--brand2)}
+.footer{text-align:center;color:#3a4a6b;font-size:12px;margin-top:26px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/></svg>
+    </div>
+    <div>
+      <h1>Snapin · 闪贴 · 截图软件高保真原型</h1>
+      <div class="sub">跨平台（macOS / Windows）· 科技蓝主题 · 点击顶部标签切换界面</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-s="capture">① 截图取景</div>
+    <div class="tab" data-s="annotate">② 标注编辑</div>
+    <div class="tab" data-s="pin">③ 贴图钉屏</div>
+    <div class="tab" data-s="settings">④ 偏好设置</div>
+    <div class="tab" data-s="history">⑤ 历史记录</div>
+    <div class="tab" data-s="tray">⑥ 菜单栏/托盘</div>
+    <div class="tab" data-s="activate">⑦ 授权激活</div>
+  </div>
+  <!-- ① 截图取景 -->
+  <div class="screen active" id="s-capture">
+    <div class="caption">按下全局快捷键（Mac <b>⌘⇧A</b> / Win <b>Ctrl+Shift+A</b>）后，屏幕暗化进入取景模式。鼠标悬停<b>智能识别窗口/控件</b>，拖拽形成选区，实时显示尺寸与放大镜。</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">截图取景中…</div><div class="os">macOS / Windows 通用</div></div>
+      <div class="stage">
+        <div class="desktop-hint">— 桌面画面（截图目标）—</div>
+        <div class="mask"></div>
+        <div class="sel" style="left:210px;top:120px;width:440px;height:270px">
+          <div class="shot"><div class="bar"></div><div class="bar s"></div><div class="bar" style="width:48%"></div></div>
+          <div class="dim">440 × 270</div>
+          <div class="handle h-tl"></div><div class="handle h-tr"></div>
+          <div class="handle h-bl"></div><div class="handle h-br"></div>
+          <div class="handle h-t"></div><div class="handle h-b"></div>
+          <div class="handle h-l"></div><div class="handle h-r"></div>
+        </div>
+        <div class="tag" style="left:680px;top:150px">🔍 悬停自动识别窗口边界</div>
+        <div class="toolbar" style="left:400px;top:400px">
+          <div class="tbtn on" title="矩形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg></div>
+          <div class="tbtn" title="椭圆"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg></div>
+          <div class="tbtn" title="箭头"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="tbtn" title="画笔"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20l5-1 9-9-4-4-9 9z"/></svg></div>
+          <div class="tbtn" title="文字"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 6h14M12 6v13"/></svg></div>
+          <div class="tbtn" title="马赛克"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="5" height="5"/><rect x="14" y="4" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/><rect x="4" y="14" width="5" height="5"/><rect x="14" y="14" width="5" height="5"/></svg></div>
+          <div class="tb-sep"></div>
+          <div class="tbtn" title="撤销"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></div>
+          <div class="tbtn" title="保存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></div>
+          <div class="tbtn no" title="取消"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+          <div class="tbtn ok" title="完成 / 复制"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="l"><span class="k">拖拽</span>框选区域</div>
+      <div class="l"><span class="k">单击</span>选中识别到的窗口</div>
+      <div class="l"><span class="k">方向键</span>微调 1px</div>
+      <div class="l"><span class="k">Enter</span>复制到剪贴板</div>
+      <div class="l"><span class="k">Esc</span>取消</div>
+    </div>
+  </div>
+
+  <!-- ② 标注编辑 -->
+  <div class="screen" id="s-annotate">
+    <div class="caption">选区确定后进入<b>标注模式</b>：矩形/箭头/文字/序号/马赛克，属性栏可调颜色与粗细。支持<b>撤销重做</b>，输出到剪贴板、文件或贴图。</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">标注编辑器</div><div class="os">序号标记 · 打码 · 箭头</div></div>
+      <div class="stage">
+        <div class="mask" style="background:rgba(6,10,20,.7)"></div>
+        <div class="sel" style="left:180px;top:80px;width:520px;height:340px">
+          <div class="shot">
+            <div class="bar"></div><div class="bar s"></div>
+            <!-- annotation samples -->
+            <div style="position:absolute;left:40px;top:70px;width:150px;height:60px;border:3px solid #ef4444;border-radius:4px"></div>
+            <div style="position:absolute;left:60px;top:150px;width:160px;height:26px;background:repeating-linear-gradient(45deg,#33456a,#33456a 6px,#22334f 6px,#22334f 12px);border-radius:3px"></div>
+            <svg style="position:absolute;left:210px;top:60px;width:150px;height:120px" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"><path d="M10 110 L120 20"/><path d="M120 20 L95 30 M120 20 L110 48"/></svg>
+            <div style="position:absolute;left:300px;top:200px;width:26px;height:26px;background:#ef4444;color:#fff;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700">1</div>
+            <div style="position:absolute;left:340px;top:240px;width:26px;height:26px;background:#ef4444;color:#fff;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700">2</div>
+            <div style="position:absolute;left:380px;top:120px;color:#22d3ee;font-size:16px;font-weight:600;font-style:italic">这里需要修改 ✎</div>
+          </div>
+          <div class="dim">520 × 340</div>
+          <div class="handle h-tl"></div><div class="handle h-br"></div>
+        </div>
+        <!-- toolbar with text tool active -->
+        <div class="toolbar" style="left:200px;top:430px">
+          <div class="tbtn" title="矩形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg></div>
+          <div class="tbtn" title="箭头"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="tbtn on" title="文字"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 6h14M12 6v13"/></svg></div>
+          <div class="tbtn" title="序号"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="10" fill="currentColor" text-anchor="middle" stroke="none">1</text></svg></div>
+          <div class="tbtn" title="马赛克"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="5" height="5"/><rect x="14" y="4" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg></div>
+          <div class="tb-sep"></div>
+          <div class="tbtn" title="撤销"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></div>
+          <div class="tbtn" title="重做"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></div>
+          <div class="tb-sep"></div>
+          <div class="tbtn" title="贴图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4v7h7"/><rect x="3" y="4" width="12" height="16" rx="1"/></svg></div>
+          <div class="tbtn" title="保存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg></div>
+          <div class="tbtn ok" title="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></div>
+        </div>
+        <!-- property bar -->
+        <div class="props" style="left:200px;top:35px">
+          <span>颜色</span>
+          <div class="swatch">
+            <div class="sw sel" style="background:#ef4444"></div>
+            <div class="sw" style="background:#f59e0b"></div>
+            <div class="sw" style="background:#22c55e"></div>
+            <div class="sw" style="background:#3b82f6"></div>
+            <div class="sw" style="background:#22d3ee"></div>
+          </div>
+          <div style="width:1px;height:16px;background:var(--line)"></div>
+          <span>粗细</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div style="width:16px;height:2px;background:var(--muted)"></div>
+            <div style="width:16px;height:4px;background:var(--brand2)"></div>
+            <div style="width:16px;height:6px;background:var(--muted)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="l"><span class="k">Ctrl/⌘ + Z</span>撤销</div>
+      <div class="l"><span class="k">Ctrl/⌘ + Shift + Z</span>重做</div>
+      <div class="l"><span class="k">Delete</span>删除选中标注</div>
+      <div class="l"><span class="k">Enter</span>复制并退出</div>
+    </div>
+  </div>
+
+  <!-- ③ 贴图钉屏 -->
+  <div class="screen" id="s-pin">
+    <div class="caption"><b>贴图钉屏</b>：把截图作为置顶浮窗贴在屏幕上，随时对照参考。支持缩放、拖动、透明度调节、双击隐藏。研发对照 UI、设计比对稿必备。</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">桌面 · 贴图浮窗</div><div class="os">Always on Top</div></div>
+      <div class="stage">
+        <div class="desktop-hint">— 正常工作桌面 —</div>
+        <div class="pin" style="left:120px;top:70px;width:260px">
+          <div class="pintop">📌 贴图 · 100%
+            <span style="margin-left:auto;display:flex;gap:8px">◱ ▢ ✕</span></div>
+          <div class="pinbody" style="height:150px"><div class="bar" style="height:8px;width:70%;background:#2f4d7d;border-radius:4px;margin-bottom:8px"></div><div class="bar" style="height:8px;width:45%;background:#2f4d7d;border-radius:4px"></div></div>
+        </div>
+        <div class="pin" style="left:440px;top:230px;width:300px;opacity:.85">
+          <div class="pintop">📌 贴图 · 85% 半透明
+            <span style="margin-left:auto;display:flex;gap:8px">◱ ▢ ✕</span></div>
+          <div class="pinbody" style="height:170px"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#60a5fa" stroke-width="1.5" style="margin:auto;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        </div>
+        <div class="tag" style="left:390px;top:90px">滚轮缩放 · 拖动移动 · 双击隐藏</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="l"><span class="k">F3</span>贴出剪贴板图片</div>
+      <div class="l"><span class="k">滚轮</span>缩放</div>
+      <div class="l"><span class="k">双击</span>隐藏/显示</div>
+      <div class="l"><span class="k">右键</span>更多操作</div>
+    </div>
+  </div>
+
+  <!-- ④ 偏好设置 -->
+  <div class="screen" id="s-settings">
+    <div class="caption"><b>偏好设置</b>：自定义快捷键、保存路径与命名规则、输出格式、开机自启等。左侧分组导航，跨平台一致。</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">Snapin 偏好设置</div><div class="os">Settings</div></div>
+      <div class="grid2">
+        <div class="side">
+          <div class="item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/></svg>常规</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h6"/></svg>快捷键</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 2h8v12H4z"/></svg>保存与输出</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>标注默认样式</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>关于</div>
+        </div>
+        <div class="body">
+          <h2>常规</h2>
+          <div class="desc">通用设置与全局行为</div>
+          <div class="field"><div><div class="lb">全局截图快捷键</div><div class="hint">按下即进入取景模式</div></div><span class="kbd">⌘ ⇧ A / Ctrl ⇧ A</span></div>
+          <div class="field"><div><div class="lb">贴图快捷键</div><div class="hint">把剪贴板图片贴到屏幕</div></div><span class="kbd">F3</span></div>
+          <div class="field"><div><div class="lb">开机自启</div><div class="hint">登录时自动在后台运行</div></div><div class="switch on"><i></i></div></div>
+          <div class="field"><div><div class="lb">菜单栏 / 托盘常驻</div><div class="hint">隐藏 Dock，仅显示菜单栏图标</div></div><div class="switch on"><i></i></div></div>
+          <div class="field"><div><div class="lb">界面语言</div><div class="hint">支持中 / 英双语</div></div><div class="seg"><span class="on">简体中文</span><span>English</span></div></div>
+          <div class="field" style="border:none"><div><div class="lb">主题</div><div class="hint">跟随系统或手动指定</div></div><div class="seg"><span>浅色</span><span class="on">深色</span><span>跟随系统</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 历史记录 -->
+  <div class="screen" id="s-history">
+    <div class="caption"><b>历史记录库</b>：本地保存每次截图，可搜索、重新编辑、批量导出。缩略图预览标注内容。（V2 功能）</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">历史记录</div><div class="os">本地图库 · 不上传</div></div>
+      <div class="body" style="background:var(--panel)">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
+          <input class="inp" placeholder="🔍 搜索截图 / 标签 / 日期" style="flex:1"/>
+          <div class="seg"><span class="on">全部</span><span>今天</span><span>本周</span><span>已贴图</span></div>
+        </div>
+        <div class="hgrid">
+          <div class="hcard"><div class="thumb"><div class="mk" style="left:20px;top:20px;width:60px;height:40px;border-color:#ef4444"></div></div><div class="meta"><b>需求评审_首页.png</b>07-28 08:02 · 440×270</div></div>
+          <div class="hcard"><div class="thumb"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#f59e0b" stroke-width="3" style="position:absolute;left:40px;top:40px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><div class="meta"><b>Bug_登录报错.png</b>07-27 16:41 · 800×520</div></div>
+          <div class="hcard"><div class="thumb"><div class="mk" style="left:30px;top:30px;width:50px;height:50px;border-radius:50%;border-color:#22c55e"></div></div><div class="meta"><b>取色_品牌蓝.png</b>07-27 11:20 · 320×200</div></div>
+          <div class="hcard"><div class="thumb" style="background:repeating-linear-gradient(45deg,#22385f,#22385f 8px,#1a2d4d 8px,#1a2d4d 16px)"></div><div class="meta"><b>客户信息_打码.png</b>07-26 09:15 · 600×400</div></div>
+          <div class="hcard"><div class="thumb"><div class="mk" style="left:24px;top:24px;width:70px;height:30px;border-color:#3b82f6"></div></div><div class="meta"><b>教程_步骤1.png</b>07-25 14:33 · 500×300</div></div>
+          <div class="hcard"><div class="thumb"></div><div class="meta"><b>长截图_产品页.png</b>07-25 10:08 · 750×2100</div></div>
+          <div class="hcard"><div class="thumb"><div class="mk" style="left:35px;top:35px;width:40px;height:40px;border-color:#22d3ee"></div></div><div class="meta"><b>对比_旧版UI.png</b>07-24 18:50 · 400×300</div></div>
+          <div class="hcard"><div class="thumb"></div><div class="meta"><b>会议白板.png</b>07-24 15:22 · 900×600</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 菜单栏/托盘 -->
+  <div class="screen" id="s-tray">
+    <div class="caption"><b>菜单栏 / 托盘</b>：常驻后台，随时唤起。macOS 显示在顶部菜单栏，Windows 显示在右下角托盘，交互一致。</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">后台常驻</div><div class="os">Menu Bar / System Tray</div></div>
+      <div class="stage" style="height:440px;display:flex;align-items:flex-start;justify-content:flex-end;padding:0">
+        <!-- fake menubar -->
+        <div style="position:absolute;top:0;left:0;right:0;height:28px;background:rgba(10,16,30,.85);display:flex;align-items:center;justify-content:flex-end;padding:0 16px;gap:18px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)">
+          <span>📶</span><span>🔋</span><span style="color:var(--brand2)">📷 Snapin</span><span>08:10</span>
+        </div>
+        <!-- dropdown menu -->
+        <div style="position:absolute;top:34px;right:60px;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 20px 50px rgba(0,0,0,.6),var(--glow)">
+          <div class="side" style="background:none;border:none;padding:0">
+            <div class="item"><span style="width:18px">⌘⇧A</span>区域截图</div>
+            <div class="item"><span style="width:18px">⌘⇧F</span>全屏截图</div>
+            <div class="item"><span style="width:18px">⌥⌘A</span>延时截图</div>
+            <div class="item"><span style="width:18px">F3</span>贴出剪贴板</div>
+            <div style="height:1px;background:var(--line);margin:6px 4px"></div>
+            <div class="item"><span style="width:18px">🎨</span>拾色器</div>
+            <div class="item"><span style="width:18px">🕘</span>历史记录</div>
+            <div style="height:1px;background:var(--line);margin:6px 4px"></div>
+            <div class="item"><span style="width:18px">⚙️</span>偏好设置…</div>
+            <div class="item"><span style="width:18px">⏻</span>退出 Snapin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">Snapin 闪贴 高保真原型 · 交互演示用 · 视觉与文案可随反馈迭代</div>
+  </div>
+
+  <!-- ⑦ 授权激活 -->
+  <div class="screen" id="s-activate">
+    <div class="caption"><b>授权激活</b>：买断制 + 功能限制试用。免费版可用基础截图标注；输入<b>邮箱 + 授权码</b>激活后解锁贴图、历史记录、拾色器等高级功能。激活后本地写入凭证，<b>离线可用</b>，无云同步。</div>
+    <div class="frame">
+      <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">Snapin · 激活</div><div class="os">一次性买断 · 2 台设备</div></div>
+      <div class="stage" style="height:480px;display:grid;place-items:center">
+        <div style="width:420px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px 30px 26px;box-shadow:0 20px 50px rgba(0,0,0,.5),var(--glow)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <svg width="34" height="34" viewBox="0 0 96 96"><defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#ga)"/><path d="M30 40 V30 H40" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M66 56 V66 H56" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg>
+            <div><div style="font-size:18px;font-weight:800">激活 Snapin 闪贴</div><div style="font-size:12px;color:var(--muted)">输入购买时收到的邮箱与授权码</div></div>
+          </div>
+          <div style="margin-top:22px">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">邮箱</div>
+            <input class="inp" style="width:100%;margin-bottom:16px" value="cheng@zhjd365.com"/>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">授权码 License Key</div>
+            <input class="inp" style="width:100%;font-family:ui-monospace,monospace;letter-spacing:1px" value="SNPN-8F3A-2K9D-Q7XZ"/>
+          </div>
+          <div style="margin-top:22px;display:flex;gap:10px">
+            <div style="flex:1;text-align:center;padding:11px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--cyan));color:#fff;font-weight:600;cursor:pointer;box-shadow:var(--glow)">立即激活</div>
+            <div style="padding:11px 16px;border-radius:10px;border:1px solid var(--line);color:var(--muted);cursor:pointer">继续试用</div>
+          </div>
+          <div style="margin-top:16px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:14px">
+            🔒 截图与历史记录全部本地存储，绝不上传云端<br>
+            🖥 一个授权码可激活 2 台设备，可在设置中解绑迁移<br>
+            🎁 免费试用版：基础截图 + 标注（不限时、不加水印）
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="l"><span class="k">免费版</span>截图 + 基础标注</div>
+      <div class="l"><span class="k">激活解锁</span>贴图 · 历史记录 · 拾色器 · 长截图</div>
+      <div class="l"><span class="k">离线</span>激活后无需联网</div>
+    </div>
+  </div>
+
+</div>
+<script>
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('s-'+t.dataset.s).classList.add('active');
+  };
+});
+document.querySelectorAll('.switch').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
+document.querySelectorAll('.props').forEach(p=>{
+  p.querySelectorAll('.sw').forEach(s=>s.onclick=function(){
+    p.querySelectorAll('.sw').forEach(x=>x.classList.remove('sel'));
+    this.classList.add('sel');
+  });
+});
+document.querySelectorAll('.seg').forEach(g=>{
+  g.querySelectorAll('span').forEach(s=>s.onclick=function(){
+    g.querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+</script>
+</body>
+</html>

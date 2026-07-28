@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Snapin 闪贴</title>
+<style>
+:root{--bg:#0a0e1a;--panel:#111827;--line:#1e293b;--brand:#3b82f6;--cyan:#22d3ee;--txt:#e5edff;--muted:#8595b8;--glow:0 0 30px rgba(59,130,246,.35)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+/* Header */
+.header{display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid var(--line)}
+.header svg{width:28px;height:28px}
+.header h1{font-size:17px;font-weight:800}
+.header h1 .in{background:linear-gradient(135deg,var(--brand),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.header .ver{font-size:11px;color:var(--muted);margin-left:4px}
+.header .spacer{flex:1}
+.status-badge{font-size:11px;padding:4px 12px;border-radius:20px;font-weight:600}
+.status-free{background:#f59e0b20;color:#f59e0b}
+.status-pro{background:#22c55e20;color:#22c55e}
+/* Body */
+.body{flex:1;display:flex;overflow:hidden}
+/* Sidebar */
+.sidebar{width:180px;border-right:1px solid var(--line);padding:16px 0;flex-shrink:0}
+.nav-item{padding:10px 20px;font-size:13px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+.nav-item:hover{color:var(--txt);background:rgba(59,130,246,.08)}
+.nav-item.active{color:var(--brand);background:rgba(59,130,246,.12);border-right:3px solid var(--brand)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+/* Main */
+.main{flex:1;padding:24px;overflow-y:auto}
+.page{display:none}
+.page.active{display:block}
+.page h2{font-size:18px;margin-bottom:16px}
+/* Feature cards */
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px}
+.fcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;cursor:pointer;transition:.2s}
+.fcard:hover{border-color:var(--brand);transform:translateY(-2px);box-shadow:var(--glow)}
+.fcard .ic{font-size:24px;margin-bottom:8px}
+.fcard h3{font-size:14px;margin-bottom:4px}
+.fcard p{font-size:12px;color:var(--muted);line-height:1.5}
+.fcard .shortcut{font-size:11px;color:var(--cyan);margin-top:6px;font-family:monospace}
+/* License */
+.license-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;max-width:400px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.field input{width:100%;background:#0b1220;border:1px solid var(--line);border-radius:6px;padding:9px 12px;color:var(--txt);font-size:13px;outline:none}
+.field input:focus{border-color:var(--brand)}
+.btn{padding:10px 20px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--cyan));color:#fff;font-weight:600;border:none;cursor:pointer;font-size:13px}
+.btn:hover{filter:brightness(1.1)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.msg{font-size:12px;margin-top:8px}
+.msg.ok{color:#22c55e}.msg.err{color:#ef4444}
+/* History */
+.history-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.history-item{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;position:relative}
+.history-item img{width:100%;height:100px;object-fit:cover;display:block}
+.history-item .info{padding:8px 10px}
+.history-item .name{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item .date{font-size:10px;color:var(--muted);margin-top:2px}
+.history-item .del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;width:20px;height:20px;font-size:10px;cursor:pointer;opacity:0;transition:.2s}
+.history-item:hover .del{opacity:1}
+.empty{text-align:center;color:var(--muted);padding:40px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg viewBox="0 0 96 96" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g)"/><path d="M30 40V30H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M66 56V66H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg>
+  <h1>Snap<span class="in">in</span> 闪贴 <span class="ver">v0.1.0</span></h1>
+  <div class="spacer"></div>
+  <div id="statusBadge" class="status-badge status-free">免费版</div>
+</div>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="nav-item active" data-page="home" onclick="showPage('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      首页
+    </div>
+    <div class="nav-item" data-page="license" onclick="showPage('license')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5v4m0 0v4m0-4h4m-4 0h-4M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+      授权激活
+    </div>
+    <div class="nav-item" data-page="history" onclick="showPage('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      历史记录
+    </div>
+    <div class="nav-item" data-page="settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+      设置
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- 首页 -->
+    <div class="page active" id="page-home">
+      <h2>快捷工具</h2>
+      <div class="fgrid">
+        <div class="fcard" onclick="doCapture()">
+          <div class="ic">📸</div><h3>区域截图</h3><p>拖拽选区截图，支持标注编辑</p><div class="shortcut">⌘⇧A</div>
+        </div>
+        <div class="fcard" onclick="doFullscreen()">
+          <div class="ic">🖥</div><h3>全屏截图</h3><p>截取当前主屏幕全部内容</p><div class="shortcut">⌘⇧F</div>
+        </div>
+        <div class="fcard" onclick="doPin()">
+          <div class="ic">📌</div><h3>贴图钉屏</h3><p>从剪贴板贴图，始终置顶</p><div class="shortcut">F3</div>
+        </div>
+        <div class="fcard" onclick="doColorPicker()">
+          <div class="ic">🎨</div><h3>拾色器</h3><p>屏幕取色，HEX/RGB 复制</p><div class="shortcut">⌘⇧C</div>
+        </div>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-top:16px">💡 首次使用截图/贴图功能，需要在系统偏好设置 → 隐私与安全 → 屏幕录制中授权 Snapin。</p>
+    </div>
+
+    <!-- 授权 -->
+    <div class="page" id="page-license">
+      <h2>授权激活</h2>
+      <div id="licenseActive" class="license-box" style="display:none">
+        <p style="margin-bottom:8px">✅ 已激活 Pro 版</p>
+        <p style="font-size:13px;color:var(--muted)">绑定邮箱：<span id="licEmail"></span></p>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px">最多可在 2 台设备上使用</p>
+        <button class="btn btn-sm" style="margin-top:16px;background:#dc2626" onclick="doDeactivate()">解绑设备</button>
+      </div>
+      <div id="licenseForm" class="license-box">
+        <p style="margin-bottom:16px;font-size:13px;color:var(--muted)">输入购买时收到的邮箱和授权码激活 Pro 功能</p>
+        <div class="field"><label>邮箱</label><input id="emailInput" type="email" placeholder="your@email.com"/></div>
+        <div class="field"><label>授权码</label><input id="keyInput" type="text" placeholder="SNPN-XXXX-XXXX-XXXX"/></div>
+        <button class="btn" onclick="doActivate()">激活</button>
+        <div class="msg" id="actMsg"></div>
+      </div>
+    </div>
+
+    <!-- 历史 -->
+    <div class="page" id="page-history">
+      <h2>历史记录 <button class="btn btn-sm" onclick="loadHistory()" style="float:right">刷���</button></h2>
+      <div id="historyList" class="history-list"><div class="empty">加载中...</div></div>
+    </div>
+
+    <!-- 设置 -->
+    <div class="page" id="page-settings">
+      <h2>设置</h2>
+      <div style="color:var(--muted);font-size:13px;line-height:2">
+        <p>截图保存目录：~/Pictures/Snapin/</p>
+        <p>历史记录文件：~/Library/Application Support/Snapin/history.json</p>
+        <p>授权凭证：~/.snapin/license.json</p>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+        <p>快捷键：⌘⇧A 区域截图 · F3 贴图 · ⌘⇧C 拾色器</p>
+        <p>托盘菜单：右键状态栏图标可快速操作</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tauri invoke 封装
+async function invoke(cmd, args) {
+  if (window.__TAURI__) {
+    const { invoke } = window.__TAURI__.core;
+    return await invoke(cmd, args);
+  }
+  throw new Error('Tauri API 未加载');
+}
+
+// 导航
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelector(`.nav-item[data-page="${name}"]`).classList.add('active');
+  if (name === 'history') loadHistory();
+}
+
+// 功能调用
+async function doCapture() { try { await invoke('start_capture'); } catch(e) { alert(e); } }
+async function doFullscreen() { try { const p = await invoke('capture_fullscreen'); alert('已保存：' + p); } catch(e) { alert(e); } }
+async function doPin() { try { await invoke('pin_from_clipboard'); } catch(e) { alert('剪贴板没有图片：' + e); } }
+async function doColorPicker() { try { await invoke('start_color_picker'); } catch(e) { alert(e); } }
+
+// 授权
+async function checkLicense() {
+  try {
+    const status = await invoke('get_license_status');
+    const badge = document.getElementById('statusBadge');
+    if (status.activated) {
+      badge.textContent = 'Pro 已激活';
+      badge.className = 'status-badge status-pro';
+      document.getElementById('licenseForm').style.display = 'none';
+      document.getElementById('licenseActive').style.display = 'block';
+      document.getElementById('licEmail').textContent = status.email || '';
+    }
+  } catch(e) { /* ignore */ }
+}
+
+async function doActivate() {
+  const email = document.getElementById('emailInput').value.trim();
+  const key = document.getElementById('keyInput').value.trim();
+  const msg = document.getElementById('actMsg');
+  if (!email || !key) { msg.textContent = '请填写邮箱和授权码'; msg.className = 'msg err'; return; }
+  try {
+    await invoke('activate_license', { email, licenseKey: key });
+    msg.textContent = '✓ 激活成功！'; msg.className = 'msg ok';
+    setTimeout(() => location.reload(), 1000);
+  } catch(e) {
+    msg.textContent = e; msg.className = 'msg err';
+  }
+}
+
+async function doDeactivate() {
+  if (!confirm('确定解绑当前设备？')) return;
+  try { await invoke('deactivate_license'); location.reload(); } catch(e) { alert(e); }
+}
+
+// 历史
+async function loadHistory() {
+  const list = document.getElementById('historyList');
+  try {
+    const items = await invoke('get_history');
+    if (!items || items.length === 0) {
+      list.innerHTML = '<div class="empty">暂无截图记录</div>';
+      return;
+    }
+    list.innerHTML = items.map(item => `
+      <div class="history-item" onclick="openFile('${item.path}')">
+        <img src="${getLocalSrc(item.path)}" onerror="this.style.display='none'"/>
+        <div class="info"><div class="name">${item.filename}</div><div class="date">${item.created_at}</div></div>
+        <button class="del" onclick="event.stopPropagation();deleteHist(${item.id})">×</button>
+      </div>
+    `).join('');
+  } catch(e) { list.innerHTML = '<div class="empty">加载失败: ' + e + '</div>'; }
+}
+
+function getLocalSrc(path) {
+  // Tauri 可以用 convertFileSrc 读取本地文件
+  if (window.__TAURI__ && window.__TAURI__.core.convertFileSrc) {
+    return window.__TAURI__.core.convertFileSrc(path);
+  }
+  return '';
+}
+
+async function deleteHist(id) {
+  try { await invoke('delete_history_entry', { id }); loadHistory(); } catch(e) { alert(e); }
+}
+
+function openFile(path) {
+  // macOS 用 Finder 打开
+  if (window.__TAURI__) {
+    invoke('open_in_finder', { path }).catch(() => {});
+  }
+}
+
+// 初始化
+checkLicense();
+</script>
+</body>
+</html>

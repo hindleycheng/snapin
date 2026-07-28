@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:rgba(10,14,26,.92);user-select:none;font-family:system-ui,sans-serif;color:#e5edff}
+.panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;background:#111827;border:1px solid #1e293b;border-radius:16px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.7),0 0 30px rgba(59,130,246,.3)}
+h2{font-size:18px;margin-bottom:6px}
+.sub{color:#8595b8;font-size:13px;margin-bottom:22px;line-height:1.6}
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:14px 14px 14px 44px;border:1px solid #1e293b;border-radius:10px;margin-bottom:10px;font-size:14px;background:#0f1626}
+.steps li::before{content:counter(s);position:absolute;left:12px;top:14px;width:24px;height:24px;
+  background:linear-gradient(135deg,#3b82f6,#22d3ee);border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-weight:700;color:#fff}
+.steps li.active{border-color:#3b82f6;box-shadow:0 0 12px rgba(59,130,246,.3)}
+.steps li.done{border-color:#22c55e;opacity:.7}
+.steps li .status{float:right;font-size:12px;color:#8595b8}
+.progress{margin-top:18px;height:6px;background:#1e293b;border-radius:3px;overflow:hidden}
+.progress .bar{height:100%;background:linear-gradient(90deg,#3b82f6,#22d3ee);transition:width .3s;width:0%}
+#preview{margin-top:16px;max-height:200px;overflow-y:auto;border:1px solid #1e293b;border-radius:8px;display:none}
+#preview img{width:100%;display:block}
+.btns{display:flex;gap:10px;margin-top:18px}
+.btn{padding:11px 18px;border-radius:10px;font-weight:600;cursor:pointer;border:none;font-size:14px}
+.btn-start{background:linear-gradient(135deg,#3b82f6,#22d3ee);color:#fff;box-shadow:0 0 24px rgba(59,130,246,.35)}
+.btn-stop{background:transparent;border:1px solid #1e293b;color:#8595b8}
+.btn-save{background:#22c55e;color:#fff;display:none}
+.hint{margin-top:14px;font-size:11px;color:#8595b8;line-height:1.7;border-top:1px solid #1e293b;padding-top:12px}
+</style>
+</head>
+<body>
+<div class="panel">
+  <h2>📜 长截图 / 滚动截图</h2>
+  <div class="sub">自动滚动当前窗口并拼接为一张长图。请先将目标窗口置于前台，然后点击"开始"。</div>
+  <ol class="steps">
+    <li id="s1" class="active">选择截图区域（拖拽框选可滚动区域）<span class="status" id="st1">等待</span></li>
+    <li id="s2">自动滚动 & 逐帧截取<span class="status" id="st2">等待</span></li>
+    <li id="s3">智能拼接去重叠<span class="status" id="st3">等待</span></li>
+    <li id="s4">保存长图<span class="status" id="st4">等待</span></li>
+  </ol>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div id="preview"><img id="previewImg"/></div>
+  <div class="btns">
+    <button class="btn btn-start" id="btnStart">开始滚动截图</button>
+    <button class="btn btn-stop" id="btnStop">停止</button>
+    <button class="btn btn-save" id="btnSave">保存长图</button>
+  </div>
+  <div class="hint">
+    ⚠️ 长截图期间请勿操作鼠标/键盘<br>
+    📐 最大支持拼接 30 帧（约 30 屏高度）<br>
+    💡 提示：对于网页长截图，也可使用浏览器的"打印为 PDF"功能
+  </div>
+</div>
+
+<script>
+const { invoke } = window.__TAURI__.core;
+const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
+
+const bar = document.getElementById('bar');
+const btnStart = document.getElementById('btnStart');
+const btnStop = document.getElementById('btnStop');
+const btnSave = document.getElementById('btnSave');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+
+let running = false;
+let frames = [];
+const MAX_FRAMES = 30;
+const SCROLL_DELAY = 400; // ms between scrolls
+
+btnStart.onclick = async () => {
+  btnStart.style.display = 'none';
+  btnStop.style.display = 'inline-block';
+  running = true;
+  frames = [];
+
+  // Step 1: 关闭当前窗口，让用户回到目标窗口，延时后开始
+  setStep(1, '进行中…');
+  // 最小化长截图面板
+  const win = getCurrentWebviewWindow();
+  await win.minimize();
+
+  // 给用户 1.5 秒回到目标窗口
+  await sleep(1500);
+
+  // Step 2: 循环截取
+  setStep(1, '✓');
+  setStep(2, '截取中…');
+
+  for (let i = 0; i < MAX_FRAMES; i++) {
+    if (!running) break;
+    try {
+      const path = await invoke('capture_scroll_frame', { frameIndex: i });
+      frames.push(path);
+      bar.style.width = ((i + 1) / MAX_FRAMES * 70) + '%';
+      setStep(2, `第 ${i+1} 帧`);
+      // 模拟滚动（通过 Rust 命令发送滚动事件）
+      await invoke('simulate_scroll', { pixels: 500 });
+      await sleep(SCROLL_DELAY);
+    } catch (e) {
+      console.log('截取结束:', e);
+      break;
+    }
+  }
+
+  running = false;
+  setStep(2, `✓ 共 ${frames.length} 帧`);
+
+  // Step 3: 拼接
+  setStep(3, '拼接中…');
+  bar.style.width = '85%';
+  try {
+    const result = await invoke('stitch_scroll_frames', { framePaths: frames });
+    bar.style.width = '100%';
+    setStep(3, '✓');
+    setStep(4, '已保存');
+    // 显示预览
+    previewImg.src = 'asset://localhost/' + result;
+    preview.style.display = 'block';
+    btnSave.style.display = 'inline-block';
+    btnSave.onclick = () => { alert('已保存至: ' + result); };
+  } catch (e) {
+    setStep(3, '失败: ' + e);
+  }
+
+  btnStop.style.display = 'none';
+  // 恢复窗口
+  await win.unminimize();
+  await win.setFocus();
+};
+
+btnStop.onclick = () => { running = false; };
+
+function setStep(n, text) {
+  document.getElementById('st' + n).textContent = text;
+  document.querySelectorAll('.steps li').forEach((li, i) => {
+    li.classList.remove('active', 'done');
+    if (i + 1 < n) li.classList.add('done');
+    else if (i + 1 === n) li.classList.add('active');
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    running = false;
+    getCurrentWebviewWindow().close();
+  }
+});
+</script>
+</body>
+</html>
