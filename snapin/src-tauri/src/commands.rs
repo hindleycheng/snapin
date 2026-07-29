@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use image::GenericImageView;
@@ -448,6 +449,124 @@ fn copy_image_to_clipboard(path: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
+// ============================================================
+// 屏幕录制
+// ============================================================
+
+static IS_RECORDING: AtomicBool = AtomicBool::new(false);
+static FRAME_COUNT: AtomicU32 = AtomicU32::new(0);
+
+fn record_dir() -> PathBuf {
+    std::env::temp_dir().join("snapin_record")
+}
+
+/// 录屏数据用于 start_capture 和 stop_recording 之间共享
+static RECORD_BOUNDS: Mutex<Option<(u32, u32, u32, u32)>> = Mutex::new(None);
+
+#[tauri::command]
+pub fn start_recording(fps: u32, x: u32, y: u32, w: u32, h: u32) -> Result<(), String> {
+    if IS_RECORDING.load(Ordering::SeqCst) {
+        return Err("已经在录制中".to_string());
+    }
+    let dir = record_dir();
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).map_err(|e| format!("创建临时目录失败: {}", e))?;
+    IS_RECORDING.store(true, Ordering::SeqCst);
+    FRAME_COUNT.store(0, Ordering::SeqCst);
+
+    // 保存选区边界
+    if let Ok(mut b) = RECORD_BOUNDS.lock() {
+        *b = Some((x, y, w, h));
+    }
+
+    let interval = std::time::Duration::from_millis((1000 / fps.max(1).min(30)) as u64);
+    std::thread::spawn(move || {
+        while IS_RECORDING.load(Ordering::SeqCst) {
+            if let Ok(monitors) = xcap::Monitor::all() {
+                if let Some(m) = monitors.first() {
+                    if let Ok(img) = m.capture_image() {
+                        let (iw, ih) = (img.width() as u32, img.height() as u32);
+                        let cx = x.min(iw.saturating_sub(1));
+                        let cy = y.min(ih.saturating_sub(1));
+                        let cw = w.min(iw.saturating_sub(cx));
+                        let ch = h.min(ih.saturating_sub(cy));
+                        let cropped = image::DynamicImage::ImageRgba8(img)
+                            .crop_imm(cx, cy, cw, ch);
+                        let idx = FRAME_COUNT.fetch_add(1, Ordering::SeqCst);
+                        let path = dir.join(format!("frame_{:05}.png", idx));
+                        if cropped.save(&path).is_err() {
+                            FRAME_COUNT.fetch_sub(1, Ordering::SeqCst);
+                        }
+                    }
+                }
+            }
+            std::thread::sleep(interval);
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub fn stop_recording() -> Result<String, String> {
+    if !IS_RECORDING.load(Ordering::SeqCst) {
+        return Err("当前没有在录制".to_string());
+    }
+    IS_RECORDING.store(false, Ordering::SeqCst);
+    std::thread::sleep(std::time::Duration::from_millis(500)); // 等待最后一帧写入完成
+    let count = FRAME_COUNT.load(Ordering::SeqCst);
+    let dir = record_dir();
+    if count == 0 {
+        let _ = fs::remove_dir_all(&dir);
+        return Err("没有录制到任何帧".to_string());
+    }
+    let output = screenshots_dir().join(format!(
+        "Snap_record_{}.mp4",
+        chrono::Local::now().format("%Y%m%d_%H%M%S")
+    ));
+    // 尝试多个常见的 ffmpeg 路径（GUI App 启动时 PATH 可能不含 /opt/homebrew/bin）
+    let ffmpeg_paths = [
+        "/opt/homebrew/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg",
+        "/opt/local/bin/ffmpeg",
+        "/usr/bin/ffmpeg",
+        "ffmpeg",
+    ];
+    let mut success = false;
+    let mut last_error = String::new();
+    for ff in &ffmpeg_paths {
+        let result = std::process::Command::new(ff)
+            .args(["-y", "-framerate", "10",
+                "-pattern_type", "glob",
+                "-i", &dir.join("frame_*.png").to_string_lossy(),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast",
+            ])
+            .arg(output.to_string_lossy().to_string())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .and_then(|c| c.wait_with_output());
+        match result {
+            Ok(o) if o.status.success() => { success = true; break; }
+            Ok(o) => { last_error = String::from_utf8_lossy(&o.stderr).to_string(); }
+            Err(e) => { last_error = format!("{}: {}", ff, e); }
+        }
+    }
+    let _ = fs::remove_dir_all(&dir);
+    if success {
+        Ok(output.to_string_lossy().to_string())
+    } else {
+        Err(format!("录制了 {} 帧，但编码失败。\n{}", count, last_error))
+    }
+}
+
+#[tauri::command]
+pub fn get_recording_status() -> serde_json::Value {
+    serde_json::json!({
+        "recording": IS_RECORDING.load(Ordering::SeqCst),
+        "frame_count": FRAME_COUNT.load(Ordering::SeqCst),
+    })
+}
+
 fn primary_monitor() -> Result<xcap::Monitor, String> {
     use xcap::Monitor;
     let monitors = Monitor::all().map_err(|e| format!("获取显示器失败: {}", e))?;
@@ -515,6 +634,42 @@ pub async fn start_capture(app: AppHandle) -> Result<(), String> {
         .build()
         .map_err(|e| format!("创建截图窗口失败: {}", e))?;
 
+    if let Some(w) = app.get_webview_window("capture") {
+        let _ = w.set_size(tauri::LogicalSize::new(width as f64, height as f64));
+        let _ = w.set_position(tauri::LogicalPosition::new(0.0, 0.0));
+    }
+    Ok(())
+}
+
+/// 录屏选区：打开覆盖层让用户框选录制区域
+#[tauri::command]
+pub async fn start_capture_with_record_mode(app: AppHandle) -> Result<(), String> {
+    ensure_screen_capture_access()?;
+    use base64::Engine;
+    let primary = primary_monitor()?;
+    let img = primary.capture_image().map_err(|e| format!("{}", e))?;
+    let mut buf = Cursor::new(Vec::new());
+    img.write_to(&mut buf, image::ImageFormat::Png)
+        .map_err(|e| format!("{}", e))?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(buf.into_inner());
+    if let Ok(mut guard) = LAST_CAPTURE_B64.lock() {
+        *guard = Some(b64);
+    }
+    let width = primary.width().map_err(|e| format!("{}", e))?;
+    let height = primary.height().map_err(|e| format!("{}", e))?;
+    let capture_url = format!("capture.html?w={}&h={}&mode=record", width, height);
+    if let Some(w) = app.get_webview_window("capture") {
+        w.close().ok();
+    }
+    let _win = WebviewWindowBuilder::new(&app, "capture", WebviewUrl::App(capture_url.into()))
+        .title("")
+        .decorations(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .visible_on_all_workspaces(true)
+        .resizable(false)
+        .build()
+        .map_err(|e| format!("创建录屏选区失败: {}", e))?;
     if let Some(w) = app.get_webview_window("capture") {
         let _ = w.set_size(tauri::LogicalSize::new(width as f64, height as f64));
         let _ = w.set_position(tauri::LogicalPosition::new(0.0, 0.0));

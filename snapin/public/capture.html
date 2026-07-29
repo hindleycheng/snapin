@@ -88,7 +88,15 @@ const { invoke } = window.__TAURI__.core;
 const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
 
 const params = new URLSearchParams(location.search);
+const recMode = params.get('mode') === 'record';
 const bg = document.getElementById('bg');
+
+// 录屏模式：隐藏标注工具栏，修改提示文字
+if (recMode) {
+  document.getElementById('hint').textContent = '拖拽框选录制区域';
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('props').style.display = 'none';
+}
 
 // 通过 Tauri 命令取回截图数据（而非 URL 参数，避免超长 URL）
 (async () => {
@@ -139,7 +147,7 @@ document.addEventListener('mouseup', () => {
   if (phase !== 'select' || !drawing) return;
   drawing = false;
   const x=Math.min(startX,endX),y=Math.min(startY,endY),w=Math.abs(endX-startX),h=Math.abs(endY-startY);
-  if (w > 10 && h > 10) { selRect={x,y,w,h}; enterAnnotateMode(); }
+  if (w > 10 && h > 10) { selRect={x,y,w,h}; recMode ? confirm() : enterAnnotateMode(); }
 });
 
 function enterAnnotateMode() {
@@ -374,6 +382,22 @@ document.getElementById('btnUndo').onclick = () => { if(annotations.length){undo
 document.getElementById('btnRedo').onclick = () => { if(undoStack.length){annotations.push(undoStack.pop());redraw();} };
 
 async function confirm(){
+  // 录屏模式：直接开始录制选区
+  if (recMode) {
+    try {
+      await invoke('start_recording', {
+        fps: 10,
+        x: Math.round(selRect.x * dpr),
+        y: Math.round(selRect.y * dpr),
+        w: Math.round(selRect.w * dpr),
+        h: Math.round(selRect.h * dpr),
+      });
+    } catch(e) { alert(e); }
+    closeWindow();
+    return;
+  }
+
+  // 截图模式：合成并保存
   const fc = document.createElement('canvas');
   fc.width = Math.round(selRect.w);
   fc.height = Math.round(selRect.h);

@@ -38,6 +38,10 @@ pub fn run() {
             commands::set_shortcuts,
             commands::format_shortcut,
             commands::open_url,
+            commands::start_recording,
+            commands::stop_recording,
+            commands::get_recording_status,
+            commands::start_capture_with_record_mode,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

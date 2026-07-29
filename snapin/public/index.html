@@ -135,6 +135,13 @@ body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-ser
         <div class="fcard" onclick="doColorPicker()">
           <div class="ic">🎨</div><h3>拾色器</h3><p>屏幕取色，HEX/RGB 复制</p><div class="shortcut">⌘⇧C</div>
         </div>
+        <div class="fcard" onclick="doRecord()" id="recordCard">
+          <div class="ic">🎬</div><h3>屏幕录制</h3><p>录制屏幕为 MP4 视频</p><div class="shortcut" style="color:#ef4444">BETA</div>
+        </div>
+      </div>
+      <div id="recordBar" style="display:none;background:#ef444415;border:1px solid #ef444440;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#ef4444;align-items:center;justify-content:space-between">
+        <span>🔴 录制中… 已录制 <strong id="recordFrameCount">0</strong> 帧</span>
+        <button class="btn btn-sm" style="background:#ef4444" onclick="doStopRecord()">停止录制</button>
       </div>
       <p style="color:var(--muted);font-size:12px;margin-top:16px">💡 首次使用截图/贴图功能，需要在系统偏好设置 → 隐私与安全 → 屏幕录制中授权 Snapin。</p>
     </div>
@@ -476,6 +483,42 @@ async function saveShortcut(action, accel) {
 async function resetShortcut(action) {
   const defaults = { capture:'CmdOrCtrl+Shift+A', fullscreen:'CmdOrCtrl+Shift+F', pin:'F3', color:'CmdOrCtrl+Shift+C' };
   await saveShortcut(action, defaults[action]);
+}
+
+// ===== 屏幕录制 =====
+let recordTimer = null;
+
+async function doRecord() {
+  try {
+    await invoke('start_recording', { fps: 10, x: 0, y: 0, w: 10000, h: 10000 });
+    document.getElementById('recordBar').style.display = 'flex';
+    document.getElementById('recordCard').style.borderColor = '#ef4444';
+    recordTimer = setInterval(updateRecordStatus, 500);
+  } catch(e) { alert('录制失败: ' + e); }
+}
+
+async function doStopRecord() {
+  try {
+    const path = await invoke('stop_recording');
+    clearInterval(recordTimer);
+    recordTimer = null;
+    document.getElementById('recordBar').style.display = 'none';
+    document.getElementById('recordCard').style.borderColor = '';
+    alert('录制完成！已保存到：' + path);
+  } catch(e) { alert(e); }
+}
+
+async function updateRecordStatus() {
+  try {
+    const s = await invoke('get_recording_status');
+    document.getElementById('recordFrameCount').textContent = s.frame_count;
+    if (!s.recording) {
+      clearInterval(recordTimer);
+      recordTimer = null;
+      document.getElementById('recordBar').style.display = 'none';
+      document.getElementById('recordCard').style.borderColor = '';
+    }
+  } catch(e) {}
 }
 
 // 初始化
