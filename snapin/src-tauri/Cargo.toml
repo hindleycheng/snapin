@@ -1,6 +1,6 @@
 [package]
 name = "snapin"
-version = "0.1.0"
+version = "0.1.1"
 description = "Snapin 闪贴 - 跨平台截图与贴图工具"
 authors = ["Snapin Team"]
 edition = "2021"
