@@ -3,8 +3,8 @@ name: Build & Release
 on:
   push:
     tags:
-      - 'v*'  # 推送 v0.1.0 这样的 tag 时触发
-  workflow_dispatch:  # 也支持手动触发
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -36,16 +36,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies
-        run: |
-          cd src-tauri
-          # 前端无需构建，直接用 public/ 目录
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          projectPath: snapin
           tagName: ${{ github.ref_name }}
           releaseName: 'Snapin ${{ github.ref_name }}'
           releaseBody: 'Snapin 闪贴 - 跨平台截图工具'
@@ -58,7 +54,7 @@ jobs:
         with:
           name: Snapin-${{ matrix.label }}
           path: |
-            src-tauri/target/*/release/bundle/**/*.dmg
-            src-tauri/target/*/release/bundle/**/*.app
-            src-tauri/target/*/release/bundle/**/*.msi
-            src-tauri/target/*/release/bundle/**/*.exe
+            snapin/src-tauri/target/*/release/bundle/**/*.dmg
+            snapin/src-tauri/target/*/release/bundle/**/*.app
+            snapin/src-tauri/target/*/release/bundle/**/*.msi
+            snapin/src-tauri/target/*/release/bundle/**/*.exe
