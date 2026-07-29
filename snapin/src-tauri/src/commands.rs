@@ -4,18 +4,45 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use image::GenericImageView;
 
+/// 暂存最近一次截图的 base64，供 capture.html 取回
+static LAST_CAPTURE_B64: Mutex<Option<String>> = Mutex::new(None);
+
 // ============================================================
-// 授权系统
+// 授权系统（在线验证 + 设备绑定）
 // ============================================================
+
+/// 服务端地址
+const LICENSE_SERVER: &str = "https://www.hfyz.cloud";
+/// 免费版每日截图次数
+const FREE_DAILY_LIMIT: i32 = 3;
+
+#[cfg(target_os = "macos")]
+pub(crate) fn ensure_screen_capture_access() -> Result<(), String> {
+    let access = core_graphics::access::ScreenCaptureAccess::default();
+    if access.preflight() {
+        return Ok(());
+    }
+
+    access.request();
+    Err("Snapin 尚未获得屏幕录制权限。请在「系统设置 → 隐私与安全性 → 屏幕与系统录音」中允许 Snapin，然后完全退出并重新打开应用。".to_string())
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn ensure_screen_capture_access() -> Result<(), String> {
+    Ok(())
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LicenseStatus {
     pub activated: bool,
     pub email: Option<String>,
     pub plan: String,
+    #[serde(default)]
+    pub device_id: Option<String>,
 }
 
 impl Default for LicenseStatus {
@@ -24,13 +51,77 @@ impl Default for LicenseStatus {
             activated: false,
             email: None,
             plan: "free".into(),
+            device_id: None,
         }
     }
 }
 
-fn license_path() -> PathBuf {
+fn snapin_dir() -> PathBuf {
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    home.join(".snapin").join("license.json")
+    let dir = home.join(".snapin");
+    fs::create_dir_all(&dir).ok();
+    dir
+}
+
+fn license_path() -> PathBuf {
+    snapin_dir().join("license.json")
+}
+
+fn usage_path() -> PathBuf {
+    snapin_dir().join("usage.json")
+}
+
+/// 生成设备指纹：主机名 + CPU 核心数 + macOS 序列号（或 Windows machine GUID）
+fn get_device_id() -> String {
+    let mut parts = Vec::new();
+
+    // 主机名
+    if let Ok(hostname) = hostname::get() {
+        parts.push(hostname.to_string_lossy().to_string());
+    }
+
+    // CPU 核心数
+    parts.push(num_cpus::get().to_string());
+
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: 硬件 UUID
+        if let Ok(output) = std::process::Command::new("ioreg")
+            .args(["-rd1", "-c", "IOPlatformExpertDevice"])
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Some(line) = stdout.lines().find(|l| l.contains("IOPlatformUUID")) {
+                if let Some(uuid) = line.split('"').nth(3) {
+                    parts.push(uuid.to_string());
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows: MachineGuid from registry
+        if let Ok(output) = std::process::Command::new("reg")
+            .args(["query", r"HKLM\SOFTWARE\Microsoft\Cryptography", "/v", "MachineGuid"])
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Some(line) = stdout.lines().find(|l| l.contains("MachineGuid")) {
+                if let Some(guid) = line.split_whitespace().last() {
+                    parts.push(guid.to_string());
+                }
+            }
+        }
+    }
+
+    // 组合后取简单 hash，避免泄露太多信息
+    let combined = parts.join("|");
+    let mut hash: u64 = 0;
+    for byte in combined.bytes() {
+        hash = hash.wrapping_mul(31).wrapping_add(byte as u64);
+    }
+    format!("dev_{:016x}", hash)
 }
 
 #[tauri::command]
@@ -47,33 +138,171 @@ pub fn get_license_status() -> LicenseStatus {
 }
 
 #[tauri::command]
-pub fn activate_license(email: String, license_key: String) -> Result<LicenseStatus, String> {
+pub async fn activate_license(email: String, license_key: String) -> Result<LicenseStatus, String> {
     if email.is_empty() || license_key.is_empty() {
         return Err("邮箱和授权码不能为空".into());
     }
     if !license_key.starts_with("SNPN-") {
         return Err("授权码格式不正确（应以 SNPN- 开头）".into());
     }
+
+    let device_id = get_device_id();
+
+    // 调服务端验证
+    let url = format!("{}/api/license/activate", LICENSE_SERVER);
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "email": email,
+            "license_key": license_key,
+            "device_id": device_id,
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("无法连接授权服务器：{}\n请检查网络后重试", e))?;
+
+    if !resp.status().is_success() {
+        let error_msg = resp
+            .json::<serde_json::Value>()
+            .await
+            .ok()
+            .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(String::from))
+            .unwrap_or_else(|| "授权验证失败".to_string());
+        return Err(error_msg);
+    }
+
+    // 验证成功，写入本地
     let status = LicenseStatus {
         activated: true,
         email: Some(email),
         plan: "pro".into(),
+        device_id: Some(device_id),
     };
-    let path = license_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
     let json = serde_json::to_string_pretty(&status).map_err(|e| e.to_string())?;
-    fs::write(&path, json).map_err(|e| e.to_string())?;
+    fs::write(license_path(), json).map_err(|e| e.to_string())?;
     Ok(status)
 }
 
 #[tauri::command]
-pub fn deactivate_license() -> Result<(), String> {
+pub async fn deactivate_license() -> Result<(), String> {
+    // 先读本地状态
     let path = license_path();
+    if !path.exists() {
+        return Ok(());
+    }
+
+    if let Ok(data) = fs::read_to_string(&path) {
+        if let Ok(status) = serde_json::from_str::<LicenseStatus>(&data) {
+            if status.activated {
+                if let (Some(email), Some(key), Some(device_id)) =
+                    (&status.email, status.device_id.as_ref(), &status.device_id)
+                {
+                    // 调服务端解绑设备
+                    let url = format!("{}/api/license/deactivate", LICENSE_SERVER);
+                    let client = reqwest::Client::new();
+                    let _ = client
+                        .post(&url)
+                        .json(&serde_json::json!({
+                            "email": email,
+                            "license_key": key,
+                            "device_id": device_id,
+                        }))
+                        .send()
+                        .await;
+                }
+            }
+        }
+    }
+
+    // 删除本地文件
     if path.exists() {
         fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
+    Ok(())
+}
+
+// ============================================================
+// 每日次数限制
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DailyUsage {
+    date: String,
+    count: i32,
+}
+
+/// 检查是否还能截图，返回 (允许, 剩余次数, 是否已激活)
+#[tauri::command]
+pub fn check_screenshot_quota() -> Result<(bool, i32, bool), String> {
+    let status = get_license_status();
+    if status.activated {
+        return Ok((true, -1, true)); // 已激活，无限
+    }
+
+    let path = usage_path();
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+
+    let usage: DailyUsage = if path.exists() {
+        let data = fs::read_to_string(&path).unwrap_or_default();
+        serde_json::from_str(&data).unwrap_or(DailyUsage {
+            date: today.clone(),
+            count: 0,
+        })
+    } else {
+        DailyUsage {
+            date: today.clone(),
+            count: 0,
+        }
+    };
+
+    // 日期不同则重置
+    if usage.date != today {
+        let fresh = DailyUsage {
+            date: today,
+            count: 0,
+        };
+        let json = serde_json::to_string_pretty(&fresh).map_err(|e| e.to_string())?;
+        fs::write(&path, json).map_err(|e| e.to_string())?;
+        return Ok((true, FREE_DAILY_LIMIT, false));
+    }
+
+    let remaining = FREE_DAILY_LIMIT - usage.count;
+    Ok((remaining > 0, remaining, false))
+}
+
+/// 截图后调用，记录已使用一次
+#[tauri::command]
+pub fn increment_screenshot_usage() -> Result<(), String> {
+    let status = get_license_status();
+    if status.activated {
+        return Ok(());
+    }
+
+    let path = usage_path();
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+
+    let mut usage: DailyUsage = if path.exists() {
+        let data = fs::read_to_string(&path).unwrap_or_default();
+        serde_json::from_str(&data).unwrap_or(DailyUsage {
+            date: today.clone(),
+            count: 0,
+        })
+    } else {
+        DailyUsage {
+            date: today.clone(),
+            count: 0,
+        }
+    };
+
+    if usage.date != today {
+        usage.date = today;
+        usage.count = 0;
+    }
+    usage.count += 1;
+
+    let json = serde_json::to_string_pretty(&usage).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -87,6 +316,110 @@ fn screenshots_dir() -> PathBuf {
         .join("Snapin");
     fs::create_dir_all(&dir).ok();
     dir
+}
+
+/// 在系统默认浏览器中打开一个 URL
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+    Ok(())
+}
+
+// ============================================================
+// 快捷键自定义
+// ============================================================
+
+/// 单个快捷键配置
+/// accel 格式：Tauri 加速器字符串，如 "CmdOrCtrl+Shift+A"、"F3"
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShortcutConfig {
+    pub capture: String,    // 区域截图
+    pub fullscreen: String, // 全屏截图
+    pub pin: String,        // 贴图钉屏
+    pub color: String,      // 拾色器
+}
+
+impl Default for ShortcutConfig {
+    fn default() -> Self {
+        Self {
+            capture: "CmdOrCtrl+Shift+A".into(),
+            fullscreen: "CmdOrCtrl+Shift+F".into(),
+            pin: "F3".into(),
+            color: "CmdOrCtrl+Shift+C".into(),
+        }
+    }
+}
+
+fn shortcuts_path() -> PathBuf {
+    snapin_dir().join("shortcuts.json")
+}
+
+/// 读取快捷键配置（不存在则返回默认值）
+#[tauri::command]
+pub fn get_shortcuts() -> ShortcutConfig {
+    let path = shortcuts_path();
+    if path.exists() {
+        if let Ok(data) = fs::read_to_string(&path) {
+            if let Ok(cfg) = serde_json::from_str::<ShortcutConfig>(&data) {
+                return cfg;
+            }
+        }
+    }
+    ShortcutConfig::default()
+}
+
+/// 保存快捷键配置，并通知前端刷新
+#[tauri::command]
+pub fn set_shortcuts(app: AppHandle, config: ShortcutConfig) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    fs::write(shortcuts_path(), json).map_err(|e| e.to_string())?;
+
+    // 通知 lib.rs 重新注册快捷键
+    app.emit("shortcuts-changed", &config).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 将加速器字符串格式化为用户可读的显示文本
+#[tauri::command]
+pub fn format_shortcut(accel: String) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        return accel
+            .replace("CmdOrCtrl", "⌘")
+            .replace("Command", "⌘")
+            .replace("Control", "⌃")
+            .replace("Shift", "⇧")
+            .replace("Alt", "⌥")
+            .replace("Super", "⌘")
+            .replace("+", "");
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        return accel
+            .replace("CmdOrCtrl", "Ctrl")
+            .replace("Super", "Win")
+            .replace("+", " + ");
+    }
 }
 
 fn gen_filename(prefix: &str) -> String {
@@ -135,6 +468,7 @@ fn primary_monitor() -> Result<xcap::Monitor, String> {
 
 #[tauri::command]
 pub fn capture_fullscreen() -> Result<String, String> {
+    ensure_screen_capture_access()?;
     let primary = primary_monitor()?;
     let img = primary
         .capture_image()
@@ -147,6 +481,7 @@ pub fn capture_fullscreen() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn start_capture(app: AppHandle) -> Result<(), String> {
+    ensure_screen_capture_access()?;
     use base64::Engine;
     let primary = primary_monitor()?;
     let img = primary.capture_image().map_err(|e| format!("{}", e))?;
@@ -154,6 +489,12 @@ pub async fn start_capture(app: AppHandle) -> Result<(), String> {
     img.write_to(&mut buf, image::ImageFormat::Png)
         .map_err(|e| format!("{}", e))?;
     let b64 = base64::engine::general_purpose::STANDARD.encode(buf.into_inner());
+
+    // 暂存截图数据，capture.html 加载后通过 get_capture_data 取回
+    if let Ok(mut guard) = LAST_CAPTURE_B64.lock() {
+        *guard = Some(b64);
+    }
+
     let width = primary.width().map_err(|e| format!("{}", e))?;
     let height = primary.height().map_err(|e| format!("{}", e))?;
     let capture_url = format!(
@@ -166,13 +507,30 @@ pub async fn start_capture(app: AppHandle) -> Result<(), String> {
     }
     let _win = WebviewWindowBuilder::new(&app, "capture", WebviewUrl::App(capture_url.into()))
         .title("")
-        .fullscreen(true)
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)
+        .visible_on_all_workspaces(true)
+        .resizable(false)
         .build()
         .map_err(|e| format!("创建截图窗口失败: {}", e))?;
+
+    if let Some(w) = app.get_webview_window("capture") {
+        let _ = w.set_size(tauri::LogicalSize::new(width as f64, height as f64));
+        let _ = w.set_position(tauri::LogicalPosition::new(0.0, 0.0));
+    }
     Ok(())
+}
+
+/// capture.html 加载后调用此命令取回截图 base64 数据
+#[tauri::command]
+pub fn get_capture_data() -> Result<String, String> {
+    if let Ok(mut guard) = LAST_CAPTURE_B64.lock() {
+        if let Some(data) = guard.take() {
+            return Ok(data);
+        }
+    }
+    Err("没有可用的截图数据".to_string())
 }
 
 #[tauri::command]
@@ -243,6 +601,7 @@ pub async fn pin_from_clipboard(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn start_color_picker(app: AppHandle) -> Result<(), String> {
+    ensure_screen_capture_access()?;
     use base64::Engine;
     let primary = primary_monitor()?;
     let img = primary.capture_image().map_err(|e| format!("{}", e))?;
@@ -256,12 +615,20 @@ pub async fn start_color_picker(app: AppHandle) -> Result<(), String> {
     let url = format!("colorpicker.html?img={}", urlencoding_minimal(&b64));
     let _win = WebviewWindowBuilder::new(&app, "colorpicker", WebviewUrl::App(url.into()))
         .title("")
-        .fullscreen(true)
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)
+        .visible_on_all_workspaces(true)
+        .resizable(false)
         .build()
         .map_err(|e| format!("创建拾色器窗口失败: {}", e))?;
+
+    if let Some(w) = app.get_webview_window("colorpicker") {
+        let ww = primary.width().map_err(|e| format!("{}", e))?;
+        let wh = primary.height().map_err(|e| format!("{}", e))?;
+        let _ = w.set_size(tauri::LogicalSize::new(ww as f64, wh as f64));
+        let _ = w.set_position(tauri::LogicalPosition::new(0.0, 0.0));
+    }
     Ok(())
 }
 
@@ -379,6 +746,7 @@ pub async fn start_scroll_capture(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn capture_scroll_frame(frame_index: u32) -> Result<String, String> {
+    ensure_screen_capture_access()?;
     let primary = primary_monitor()?;
     let img = primary.capture_image().map_err(|e| format!("{}", e))?;
     let tmp_dir = std::env::temp_dir().join("snapin_scroll");

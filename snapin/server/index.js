@@ -16,6 +16,7 @@ import Database from "better-sqlite3";
 import { nanoid } from "nanoid";
 import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import { dirname, join } from "path";
 import { registerPaymentRoutes } from "./payment.js";
 
@@ -55,7 +56,10 @@ const app = express();
 app.use(express.json());
 
 // 静态文件：托管 website/ 目录（官网 + 支付页）
-const websiteDir = join(__dirname, "..", "website");
+// 优先查找同级 website/ 目录，不存在则��试上级（开发环境）
+const websiteDir = fs.existsSync(join(__dirname, "website")) 
+  ? join(__dirname, "website")
+  : join(__dirname, "..", "website");
 app.use(express.static(websiteDir));
 // 支付页中的收款码图片（放在 website/assets/ 下）
 app.use("/assets", express.static(join(websiteDir, "assets")));

@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:transparent;user-select:none;font-family:system-ui,sans-serif}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0d12;user-select:none;font-family:system-ui,sans-serif}
 #bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 #mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1}
 #sel{position:fixed;border:2px solid #3b82f6;z-index:2;display:none;overflow:visible}
@@ -88,9 +88,24 @@ const { invoke } = window.__TAURI__.core;
 const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
 
 const params = new URLSearchParams(location.search);
-const imgB64 = params.get('img') || '';
 const bg = document.getElementById('bg');
-if (imgB64) bg.src = 'data:image/png;base64,' + decodeURIComponent(imgB64);
+
+// 通过 Tauri 命令取回截图数据（而非 URL 参数，避免超长 URL）
+(async () => {
+  try {
+    const b64 = await invoke('get_capture_data');
+    bg.onload = () => { mask.style.display = 'block'; };
+    bg.src = 'data:image/png;base64,' + b64;
+    // 如果图片已缓存（立即触发），手动显示遮罩
+    if (bg.complete) mask.style.display = 'block';
+  } catch(e) {
+    console.error('获取截图数据失败:', e);
+    mask.style.display = 'block';
+  }
+})();
+
+/// 当前屏幕的 DPI 缩放比（Retina 屏为 2，普通屏为 1）
+const dpr = window.devicePixelRatio || 1;
 
 const sel = document.getElementById('sel');
 const dim = document.getElementById('dim');
@@ -359,12 +374,21 @@ document.getElementById('btnUndo').onclick = () => { if(annotations.length){undo
 document.getElementById('btnRedo').onclick = () => { if(undoStack.length){annotations.push(undoStack.pop());redraw();} };
 
 async function confirm(){
-  const fc = document.createElement('canvas'); fc.width=selRect.w; fc.height=selRect.h;
-  const fctx=fc.getContext('2d');
-  fctx.drawImage(bg, selRect.x,selRect.y,selRect.w,selRect.h, 0,0,selRect.w,selRect.h);
-  fctx.drawImage(canvas,0,0);
-  const b64=fc.toDataURL('image/png').split(',')[1];
-  try{await invoke('save_region_capture',{x:0,y:0,w:selRect.w,h:selRect.h,imgBase64:b64});}catch(e){console.error(e);}
+  const fc = document.createElement('canvas');
+  fc.width = Math.round(selRect.w);
+  fc.height = Math.round(selRect.h);
+  const fctx = fc.getContext('2d');
+
+  // 源坐标：bg 是物理分辨率，需按 dpr 放大选择区域
+  const sx = Math.round(selRect.x * dpr);
+  const sy = Math.round(selRect.y * dpr);
+  const sw = Math.round(selRect.w * dpr);
+  const sh = Math.round(selRect.h * dpr);
+
+  fctx.drawImage(bg, sx, sy, sw, sh, 0, 0, fc.width, fc.height);
+  fctx.drawImage(canvas, 0, 0);
+  const b64 = fc.toDataURL('image/png').split(',')[1];
+  try{await invoke('save_region_capture',{x:0,y:0,w:fc.width,h:fc.height,imgBase64:b64});}catch(e){console.error(e);}
   closeWindow();
 }
 function closeWindow(){getCurrentWebviewWindow().close();}

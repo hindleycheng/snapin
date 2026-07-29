@@ -60,6 +60,24 @@ body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-ser
 .history-item .del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;width:20px;height:20px;font-size:10px;cursor:pointer;opacity:0;transition:.2s}
 .history-item:hover .del{opacity:1}
 .empty{text-align:center;color:var(--muted);padding:40px;font-size:13px}
+/* Shortcut settings */
+.sc-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+.sc-row:last-child{border-bottom:none}
+.sc-row .sc-label{font-size:13px;color:var(--txt)}
+.sc-row .sc-desc{font-size:11px;color:var(--muted);margin-top:2px}
+.sc-key{
+  font-family:ui-monospace,monospace;font-size:13px;font-weight:600;
+  background:#0b1220;border:1px solid var(--line);border-radius:6px;
+  padding:6px 16px;min-width:100px;text-align:center;color:var(--cyan);
+  cursor:pointer;transition:.2s;position:relative
+}
+.sc-key:hover{border-color:var(--brand)}
+.sc-key.recording{border-color:var(--brand);background:rgba(59,130,246,.1);color:var(--brand);animation:scPulse 1s infinite}
+.sc-key .sc-reset{position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:#fff;border:none;font-size:10px;cursor:pointer;display:none;line-height:16px;text-align:center}
+.sc-key:hover .sc-reset{display:block}
+@keyframes scPulse{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.3)}50%{box-shadow:0 0 0 6px rgba(59,130,246,0)}}
+.sc-saved{font-size:12px;color:#22c55e;margin-left:12px;display:none}
+.sc-saved.show{display:inline;animation:fadeIn .3s}
 </style>
 </head>
 <body>
@@ -68,6 +86,8 @@ body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-ser
   <svg viewBox="0 0 96 96" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect x="10" y="10" width="76" height="76" rx="22" fill="url(#g)"/><path d="M30 40V30H40" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M66 56V66H56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="48" cy="48" r="10" fill="#fff"/></svg>
   <h1>Snap<span class="in">in</span> 闪贴 <span class="ver">v0.1.0</span></h1>
   <div class="spacer"></div>
+  <button class="btn btn-sm" style="margin-right:10px" onclick="openSite('https://www.hfyz.cloud')">🌐 官网</button>
+  <button class="btn btn-sm" onclick="openSite('https://www.hfyz.cloud/pay.html')">🛒 购买 Pro (¥9.9)</button>
   <div id="statusBadge" class="status-badge status-free">免费版</div>
 </div>
 
@@ -89,12 +109,19 @@ body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-ser
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
       设置
     </div>
+    <div style="margin-top:auto;padding:12px 16px">
+      <button class="btn" style="width:100%" onclick="openSite('https://www.hfyz.cloud/pay.html')">🛒 购买 Pro</button>
+    </div>
   </div>
 
   <div class="main">
     <!-- 首页 -->
     <div class="page active" id="page-home">
       <h2>快捷工具</h2>
+      <div id="quotaBar" style="display:none;background:#f59e0b15;border:1px solid #f59e0b40;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#f59e0b;display:flex;align-items:center;justify-content:space-between">
+        <span>📦 免费版：今日剩余 <strong id="quotaRemaining">3</strong> 次截图</span>
+        <button class="btn btn-sm" onclick="showPage('license')">升级 Pro →</button>
+      </div>
       <div class="fgrid">
         <div class="fcard" onclick="doCapture()">
           <div class="ic">📸</div><h3>区域截图</h3><p>拖拽选区截图，支持标注编辑</p><div class="shortcut">⌘⇧A</div>
@@ -123,6 +150,7 @@ body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-ser
       </div>
       <div id="licenseForm" class="license-box">
         <p style="margin-bottom:16px;font-size:13px;color:var(--muted)">输入购买时收到的邮箱和授权码激活 Pro 功能</p>
+        <p style="margin-bottom:12px;font-size:12px;color:var(--muted)">还没有授权码？<a href="#" style="color:var(--cyan);text-decoration:underline" onclick="openSite('https://www.hfyz.cloud/pay.html');return false">前往官网购买 →</a></p>
         <div class="field"><label>邮箱</label><input id="emailInput" type="email" placeholder="your@email.com"/></div>
         <div class="field"><label>授权码</label><input id="keyInput" type="text" placeholder="SNPN-XXXX-XXXX-XXXX"/></div>
         <button class="btn" onclick="doActivate()">激活</button>
@@ -138,15 +166,44 @@ body{font-family:-apple-system,"SF Pro Display","PingFang SC",system-ui,sans-ser
 
     <!-- 设置 -->
     <div class="page" id="page-settings">
-      <h2>设置</h2>
-      <div style="color:var(--muted);font-size:13px;line-height:2">
-        <p>截图保存目录：~/Pictures/Snapin/</p>
-        <p>历史记录文件：~/Library/Application Support/Snapin/history.json</p>
-        <p>授权凭证：~/.snapin/license.json</p>
-        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-        <p>快捷键：⌘⇧A 区域截图 · F3 贴图 · ⌘⇧C 拾色器</p>
-        <p>托盘菜单：右键状态栏图标可快速操作</p>
+      <h2>快捷键设置</h2>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 20px;max-width:520px;margin-bottom:24px">
+        <div class="sc-row">
+          <div><div class="sc-label">区域截图</div><div class="sc-desc">框选屏幕区域并标注</div></div>
+          <div style="display:flex;align-items:center">
+            <span id="sc-saved-1" class="sc-saved">✓ 已保存</span>
+            <kbd class="sc-key" id="sc-key-1" data-action="capture">点击设置<span class="sc-reset" onclick="resetShortcut('capture')">↺</span></kbd>
+          </div>
+        </div>
+        <div class="sc-row">
+          <div><div class="sc-label">全屏截图</div><div class="sc-desc">截取整个主屏幕</div></div>
+          <div style="display:flex;align-items:center">
+            <span id="sc-saved-2" class="sc-saved">✓ 已保存</span>
+            <kbd class="sc-key" id="sc-key-2" data-action="fullscreen">点击设置<span class="sc-reset" onclick="resetShortcut('fullscreen')">↺</span></kbd>
+          </div>
+        </div>
+        <div class="sc-row">
+          <div><div class="sc-label">贴图钉屏</div><div class="sc-desc">从剪贴板贴图置顶</div></div>
+          <div style="display:flex;align-items:center">
+            <span id="sc-saved-3" class="sc-saved">✓ 已保存</span>
+            <kbd class="sc-key" id="sc-key-3" data-action="pin">点击设置<span class="sc-reset" onclick="resetShortcut('pin')">↺</span></kbd>
+          </div>
+        </div>
+        <div class="sc-row">
+          <div><div class="sc-label">拾色器</div><div class="sc-desc">屏幕取色并复制</div></div>
+          <div style="display:flex;align-items:center">
+            <span id="sc-saved-4" class="sc-saved">✓ 已保存</span>
+            <kbd class="sc-key" id="sc-key-4" data-action="color">点击设置<span class="sc-reset" onclick="resetShortcut('color')">↺</span></kbd>
+          </div>
+        </div>
       </div>
+      <p style="color:var(--muted);font-size:12px;max-width:520px;line-height:1.8">
+        点击快捷键按钮，然后按下你想要的组合键（如 ⌘ + ⇧ + A）。<br>
+        按 Esc 取消录制。修改后即时生效，无需重启。<br><br>
+        <strong style="color:var(--cyan)">其他设置</strong><br>
+        截图保存目录：~/Pictures/Snapin/<br>
+        授权凭证：~/.snapin/license.json
+      </p>
     </div>
   </div>
 </div>
@@ -170,11 +227,53 @@ function showPage(name) {
   if (name === 'history') loadHistory();
 }
 
-// 功能调用
-async function doCapture() { try { await invoke('start_capture'); } catch(e) { alert(e); } }
-async function doFullscreen() { try { const p = await invoke('capture_fullscreen'); alert('已保存：' + p); } catch(e) { alert(e); } }
+// 功能调用（带次数检查）
+async function checkQuota() {
+  try {
+    const [allowed, remaining, activated] = await invoke('check_screenshot_quota');
+    return { allowed, remaining, activated };
+  } catch(e) {
+    // 检查失败时默认允许（避免服务端挂了影响使用）
+    return { allowed: true, remaining: -1, activated: false };
+  }
+}
+
+async function consumeQuota() {
+  try { await invoke('increment_screenshot_usage'); } catch(e) {}
+}
+
+function showQuotaExceeded() {
+  showPage('license');
+  const msg = document.getElementById('actMsg');
+  msg.textContent = '⚠️ 免费版今日截图次数已用完，激活 Pro 解锁无限截图';
+  msg.className = 'msg err';
+}
+
+async function doCapture() {
+  const q = await checkQuota();
+  if (!q.allowed) { showQuotaExceeded(); return; }
+  try { await invoke('start_capture'); await consumeQuota(); updateQuotaBar(); } catch(e) { alert(e); }
+}
+
+async function doFullscreen() {
+  const q = await checkQuota();
+  if (!q.allowed) { showQuotaExceeded(); return; }
+  try { const p = await invoke('capture_fullscreen'); await consumeQuota(); updateQuotaBar(); alert('已保存：' + p); } catch(e) { alert(e); }
+}
+
 async function doPin() { try { await invoke('pin_from_clipboard'); } catch(e) { alert('剪贴板没有图片：' + e); } }
 async function doColorPicker() { try { await invoke('start_color_picker'); } catch(e) { alert(e); } }
+
+async function updateQuotaBar() {
+  const q = await checkQuota();
+  const bar = document.getElementById('quotaBar');
+  if (!q.activated) {
+    bar.style.display = 'flex';
+    document.getElementById('quotaRemaining').textContent = q.remaining > 0 ? q.remaining : 0;
+  } else {
+    bar.style.display = 'none';
+  }
+}
 
 // 授权
 async function checkLicense() {
@@ -248,8 +347,141 @@ function openFile(path) {
   }
 }
 
+async function openSite(url) {
+  try { await invoke('open_url', { url }); } catch(e) { alert('无法打开浏览器: ' + e); }
+}
+
+// ===== 快捷键自定义 =====
+let currentShortcuts = null;
+let recordingAction = null;
+let recordingKeyId = null;
+
+async function loadShortcuts() {
+  try {
+    currentShortcuts = await invoke('get_shortcuts');
+    updateShortcutDisplay();
+  } catch(e) { console.error('加载快捷键失败:', e); }
+}
+
+function updateShortcutDisplay() {
+  if (!currentShortcuts) return;
+  const actions = { capture: 1, fullscreen: 2, pin: 3, color: 4 };
+  for (const [action, idx] of Object.entries(actions)) {
+    const keyEl = document.getElementById('sc-key-' + idx);
+    const accel = currentShortcuts[action];
+    keyEl.firstChild.textContent = formatAccel(accel);
+  }
+}
+
+function formatAccel(accel) {
+  const isMac = navigator.platform.toLowerCase().includes('mac');
+  if (isMac) {
+    return accel.replace(/CmdOrCtrl/g,'⌘').replace(/Command/g,'⌘').replace(/Control/g,'⌃').replace(/Shift/g,'⇧').replace(/Alt/g,'⌥').replace(/Super/g,'⌘').replace(/\+/g,'');
+  }
+  return accel.replace(/CmdOrCtrl/g,'Ctrl').replace(/Super/g,'Win').replace(/\+/g,' + ');
+}
+
+// 按键名映射
+const keyMap = {
+  'a':'A','b':'B','c':'C','d':'D','e':'E','f':'F','g':'G','h':'H','i':'I','j':'J','k':'K','l':'L','m':'M',
+  'n':'N','o':'O','p':'P','q':'Q','r':'R','s':'S','t':'T','u':'U','v':'V','w':'W','x':'X','y':'Y','z':'Z',
+  '1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','0':'0',
+  'f1':'F1','f2':'F2','f3':'F3','f4':'F4','f5':'F5','f6':'F6','f7':'F7','f8':'F8','f9':'F9','f10':'F10','f11':'F11','f12':'F12',
+  'escape':'Escape','backspace':'Backspace','tab':'Tab','enter':'Enter','space':'Space',
+  'arrowup':'Up','arrowdown':'Down','arrowleft':'Left','arrowright':'Right',
+};
+
+document.addEventListener('click', (e) => {
+  const keyEl = e.target.closest('.sc-key');
+  if (!keyEl || e.target.classList.contains('sc-reset')) return;
+  if (recordingAction) {
+    // 取消上一个录制
+    cancelRecording();
+  }
+  recordingAction = keyEl.dataset.action;
+  recordingKeyId = keyEl.id;
+  keyEl.classList.add('recording');
+  keyEl.firstChild.textContent = '按下快捷键...';
+});
+
+document.addEventListener('keydown', (e) => {
+  if (!recordingAction) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (e.key === 'Escape') {
+    cancelRecording();
+    return;
+  }
+
+  // 至少需要一个修饰键（除 F 键外）
+  const key = e.key.toLowerCase();
+  const isFKey = key.startsWith('f') && key.length <= 3 && parseInt(key.slice(1)) >= 1 && parseInt(key.slice(1)) <= 12;
+
+  if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && !isFKey) {
+    return; // 忽略没有修饰键的普通按键
+  }
+
+  let parts = [];
+  if (e.metaKey) parts.push(isMac() ? 'Super' : 'Super');
+  if (e.ctrlKey && !e.metaKey) parts.push('Control');
+  if (e.altKey) parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+
+  let keyName = keyMap[key];
+  if (!keyName) return;
+
+  // 修饰键单独按下不算
+  if (['meta','control','alt','shift'].includes(key)) return;
+
+  parts.push(keyName);
+  const accel = parts.join('+');
+
+  // 保存
+  saveShortcut(recordingAction, accel);
+  cancelRecording();
+});
+
+function isMac() {
+  return navigator.platform.toLowerCase().includes('mac');
+}
+
+function cancelRecording() {
+  if (recordingKeyId) {
+    const el = document.getElementById(recordingKeyId);
+    if (el) el.classList.remove('recording');
+  }
+  recordingAction = null;
+  recordingKeyId = null;
+  updateShortcutDisplay();
+}
+
+async function saveShortcut(action, accel) {
+  try {
+    currentShortcuts[action] = accel;
+    await invoke('set_shortcuts', { config: currentShortcuts });
+    updateShortcutDisplay();
+    // 显示保存成功提示
+    const idx = { capture:1, fullscreen:2, pin:3, color:4 }[action];
+    const savedEl = document.getElementById('sc-saved-' + idx);
+    if (savedEl) {
+      savedEl.classList.add('show');
+      setTimeout(() => savedEl.classList.remove('show'), 2000);
+    }
+  } catch(e) {
+    alert('保存快捷键失败: ' + e);
+  }
+}
+
+async function resetShortcut(action) {
+  const defaults = { capture:'CmdOrCtrl+Shift+A', fullscreen:'CmdOrCtrl+Shift+F', pin:'F3', color:'CmdOrCtrl+Shift+C' };
+  await saveShortcut(action, defaults[action]);
+}
+
 // 初始化
 checkLicense();
+updateQuotaBar();
+loadShortcuts();
 </script>
 </body>
 </html>
