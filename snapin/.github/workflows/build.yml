@@ -36,10 +36,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies
-        run: |
-          cd src-tauri
-          # 前端无需构建，直接用 public/ 目录
+      - name: Install frontend dependencies
+        run: npm ci || npm install
+
+      - name: Build frontend
+        run: npm run build
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
